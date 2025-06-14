@@ -67,7 +67,7 @@ class EnvironmentLoader:
         deepseek = DeepSeekConfig(
             api_key=self.get_env_var("DEEPSEEK_API_KEY", required=True),
             base_url=self.get_env_var("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-            model_name=self.get_env_var("DEEPSEEK_MODEL", "deepseek-chat"),
+            model_name=self.get_env_var("DEEPSEEK_MODEL", "deepseek-reasoner"),
             max_tokens=self._get_int("DEEPSEEK_MAX_TOKENS", "4000"),
             temperature=self._get_float("DEEPSEEK_TEMPERATURE", "0.7")
         )

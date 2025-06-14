@@ -22,8 +22,8 @@ class DeepSeekConfig(BaseModel):
         description="DeepSeek API基础URL"
     )
     model_name: str = Field(
-        default="deepseek-chat",
-        description="模型名称"
+        default="deepseek-reasoner",
+        description="模型名称(DeepSeek-R1-0528推理模型)"
     )
     max_tokens: int = Field(
         default=4000,

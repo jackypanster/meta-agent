@@ -20,7 +20,7 @@ class TestDeepSeekConfig:
         """测试有效配置"""
         config = DeepSeekConfig(api_key="sk-test1234567890")
         assert config.api_key == "sk-test1234567890"
-        assert config.model_name == "deepseek-chat"
+        assert config.model_name == "deepseek-reasoner"
         assert config.max_tokens == 4000
     
     def test_invalid_api_key(self):
