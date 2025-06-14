@@ -44,7 +44,7 @@ class DeepSeekClient:
         
         deepseek_config = self.config.deepseek
         return {
-            "model": model or deepseek_config.model,
+            "model": model or deepseek_config.model_name,
             "messages": [msg.to_dict() for msg in messages],
             "temperature": temperature or deepseek_config.temperature,
             "max_tokens": max_tokens or deepseek_config.max_tokens,

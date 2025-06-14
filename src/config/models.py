@@ -36,6 +36,18 @@ class DeepSeekConfig(BaseModel):
         le=2.0,
         description="温度参数"
     )
+    timeout: int = Field(
+        default=30,
+        gt=0,
+        le=300,
+        description="请求超时时间(秒)"
+    )
+    max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="最大重试次数"
+    )
     
     @field_validator('api_key')
     @classmethod

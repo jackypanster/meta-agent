@@ -33,51 +33,52 @@ class MemoryManager:
                         category: Optional[str] = None,
                         tags: List[str] = None,
                         importance: int = 5) -> MemoryOperation:
-        metadata = MemoryMetadata(
-            user_id=user_id, session_id=session_id, 
-            source=MemorySource.USER_INPUT, category=category,
-            tags=tags or [], importance=importance
-        )
+        metadata = {
+            "user_id": user_id, "session_id": session_id,
+            "source": "user_input", "category": category,
+            "tags": tags or [], "importance": importance
+        }
         return await self._client.add_memory(content, metadata, user_id)
         
     async def store_conversation(self, content: str, user_id: Optional[str] = None,
                                session_id: Optional[str] = None,
-                               source: MemorySource = MemorySource.USER_INPUT) -> MemoryOperation:
-        metadata = MemoryMetadata(
-            user_id=user_id, session_id=session_id,
-            source=source, tags=["conversation"]
-        )
+                               source: str = "user_input") -> MemoryOperation:
+        metadata = {
+            "user_id": user_id, "session_id": session_id,
+            "source": source, "tags": ["conversation"]
+        }
         return await self._client.add_memory(content, metadata, user_id)
         
     async def store_preference(self, content: str, user_id: Optional[str] = None,
                              category: str = "user_preference") -> MemoryOperation:
-        metadata = MemoryMetadata(
-            user_id=user_id, source=MemorySource.USER_INPUT,
-            category=category, tags=["preference"], importance=8
-        )
+        metadata = {
+            "user_id": user_id, "source": "user_input",
+            "category": category, "tags": ["preference"], "importance": 8
+        }
         return await self._client.add_memory(content, metadata, user_id)
         
     async def store_tool_result(self, tool_name: str, result: str,
                               user_id: Optional[str] = None,
                               session_id: Optional[str] = None) -> MemoryOperation:
         content = f"Tool '{tool_name}' result: {result}"
-        metadata = MemoryMetadata(
-            user_id=user_id, session_id=session_id,
-            source=MemorySource.TOOL_EXECUTION, category="tool_result",
-            tags=["tool", tool_name], importance=6
-        )
+        metadata = {
+            "user_id": user_id, "session_id": session_id,
+            "source": "tool_execution", "category": "tool_result",
+            "tags": ["tool", tool_name], "importance": 6
+        }
         return await self._client.add_memory(content, metadata, user_id)
         
     async def search_memories(self, query_text: str, user_id: Optional[str] = None,
                             session_id: Optional[str] = None,
                             memory_type: Optional[MemoryType] = None,
                             limit: int = 10,
-                            threshold: float = 0.7) -> SearchResult:
-        query = SearchQuery(
-            text=query_text, user_id=user_id, session_id=session_id,
-            memory_type=memory_type, limit=limit, threshold=threshold
-        )
-        return await self._client.search_memories(query)
+                            threshold: float = 0.7) -> List[Dict[str, Any]]:
+        # 构建完整的查询文本
+        full_query = query_text
+        if session_id:
+            full_query = f"[{session_id}] {query_text}"
+        
+        return await self._client.search_memories(full_query, user_id, limit)
         
     async def search_by_category(self, category: str, user_id: Optional[str] = None,
                                limit: int = 10) -> SearchResult:

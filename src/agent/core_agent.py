@@ -8,7 +8,7 @@ import logging
 from typing import List, Dict, Any, Optional, Union
 import json
 
-from qwen_agent import Agent
+from qwen_agent.agents import Assistant
 
 from .llm_adapter import DeepSeekLLMAdapter
 from .tool_adapter import MCPToolManager
@@ -53,9 +53,13 @@ class QwenAgentMVP:
         try:
             logger.info("开始初始化Qwen-Agent MVP...")
             
-            # 初始化内存管理器
-            await self.memory_manager.initialize()
-            logger.info("内存管理器初始化完成")
+            # 初始化内存管理器（如果配置了相应的API密钥）
+            try:
+                await self.memory_manager.__aenter__()
+                logger.info("内存管理器初始化完成")
+            except Exception as e:
+                logger.warning(f"内存管理器初始化失败，继续不使用记忆功能: {e}")
+                self.memory_manager = None
             
             # 初始化工具管理器
             await self.tool_manager.initialize()
@@ -64,13 +68,18 @@ class QwenAgentMVP:
             # 构建系统消息
             system_message = self._build_system_message()
             
-            # 初始化Qwen-Agent
-            self.agent = Agent(
-                function_list=self.tool_manager.get_tools(),
-                llm=self.llm_adapter,
-                system_message=system_message,
-                name="QwenAgentMVP",
-                description="一个集成了DeepSeek LLM、MCP工具和mem0内存的智能助手"
+            # 构建LLM配置字典
+            llm_config = {
+                'model': 'custom',  # 使用自定义模型
+                'model_type': 'custom',
+                'api_key': 'not_needed',  # 我们使用自定义适配器
+            }
+            
+            # 初始化Qwen-Agent Assistant - 临时移除工具以避免fncall_agent问题
+            self.agent = Assistant(
+                # function_list=self.tool_manager.get_tools(),  # 临时注释掉
+                llm=self.llm_adapter,  # 直接传递LLM适配器对象
+                system_message=system_message
             )
             
             self._initialized = True
@@ -119,8 +128,9 @@ class QwenAgentMVP:
                 user_input, session_id
             )
             
-            # 构建消息上下文
-            messages = self._build_message_context(user_input, relevant_memories)
+            # 构建消息上下文 - 临时简化测试
+            messages = [{"role": "user", "content": user_input}]
+            # messages = self._build_message_context(user_input, relevant_memories)
             
             # 调用Agent处理
             response = await self._call_agent(messages)
@@ -163,11 +173,15 @@ class QwenAgentMVP:
             if session_id:
                 search_query = f"[{session_id}] {user_input}"
             
-            # 搜索记忆
-            memories = await self.memory_manager.search_memories(
-                query=search_query,
-                limit=5
-            )
+            # 搜索记忆（如果内存管理器可用）
+            if self.memory_manager:
+                memories = await self.memory_manager.search_memories(
+                    query_text=search_query,
+                    user_id=session_id,
+                    limit=5
+                )
+            else:
+                memories = []
             
             logger.debug(f"找到 {len(memories)} 条相关记忆")
             return memories
@@ -222,21 +236,33 @@ class QwenAgentMVP:
             Agent响应
         """
         try:
-            # 调用Agent
-            response = self.agent.run(messages=messages)
-            
-            # 提取响应内容
-            if response and isinstance(response, list) and len(response) > 0:
-                last_message = response[-1]
-                if isinstance(last_message, dict):
-                    return last_message.get('content', '抱歉，我无法生成响应。')
+            # 调用Agent - run方法返回迭代器
+            response_messages = []
+            for response in self.agent.run(messages=messages):
+                logger.debug(f"Agent返回的response类型: {type(response)}, 内容: {response}")
+                # response可能是单个dict或list
+                if isinstance(response, list):
+                    response_messages.extend(response)
+                elif isinstance(response, dict):
+                    response_messages.append(response)
                 else:
-                    return str(last_message)
+                    logger.warning(f"未知的response类型: {type(response)}")
+            
+            logger.debug(f"收集到的response_messages: {response_messages}")
+            
+            # 提取最后一条assistant消息的内容
+            for msg in reversed(response_messages):
+                if isinstance(msg, dict) and msg.get('role') == 'assistant':
+                    content = msg.get('content', '')
+                    if content:
+                        return content
             
             return "抱歉，我无法生成响应。"
             
         except Exception as e:
+            import traceback
             logger.error(f"Agent调用失败: {e}")
+            logger.error(f"详细错误信息: {traceback.format_exc()}")
             raise
     
     async def _store_conversation_memory(
@@ -260,16 +286,14 @@ class QwenAgentMVP:
             if session_id:
                 conversation_text = f"[{session_id}] {conversation_text}"
             
-            # 存储到记忆
-            await self.memory_manager.add_memory(
-                text=conversation_text,
-                metadata={
-                    "type": "conversation",
-                    "session_id": session_id,
-                    "user_input": user_input,
-                    "agent_response": agent_response
-                }
-            )
+            # 存储到记忆（如果内存管理器可用）
+            if self.memory_manager:
+                await self.memory_manager.store_conversation(
+                    content=conversation_text,
+                    user_id=session_id,
+                    session_id=session_id,
+                    source="conversation"
+                )
             
             logger.debug("对话已存储到记忆")
             
@@ -309,8 +333,9 @@ class QwenAgentMVP:
             if hasattr(self.tool_manager, 'close'):
                 await self.tool_manager.close()
             
-            if hasattr(self.memory_manager, 'close'):
-                await self.memory_manager.close()
+            # 清理内存管理器（如果已初始化）
+            if self.memory_manager:
+                await self.memory_manager.__aexit__(None, None, None)
             
             self._initialized = False
             logger.info("Qwen-Agent MVP已关闭")

@@ -34,14 +34,9 @@ class AgentFactory:
     async def initialize(self) -> None:
         """初始化工厂和配置管理器"""
         try:
-            # 加载配置
-            if self.config_path:
-                config_loader = ConfigLoader(self.config_path)
-            else:
-                config_loader = ConfigLoader()
-            
-            self.config_manager = ConfigManager(config_loader)
-            await self.config_manager.initialize()
+            # 创建配置管理器
+            self.config_manager = ConfigManager(self.config_path)
+            self.config_manager.initialize()
             
             logger.info("Agent工厂初始化完成")
             
@@ -196,9 +191,8 @@ class SimpleAgentFactory:
         """
         try:
             # 使用默认配置
-            config_loader = ConfigLoader()
-            config_manager = ConfigManager(config_loader)
-            await config_manager.initialize()
+            config_manager = ConfigManager()
+            config_manager.initialize()
             
             # 创建Agent
             agent = QwenAgentMVP(config_manager)

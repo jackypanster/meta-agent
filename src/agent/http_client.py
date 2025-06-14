@@ -4,8 +4,9 @@
 """
 
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 import httpx
+from pydantic import HttpUrl
 
 
 class HttpClientError(Exception):
@@ -19,10 +20,14 @@ class HttpClientError(Exception):
 class AsyncHttpClient:
     """异步HTTP客户端基础类"""
     
-    def __init__(self, base_url: str, headers: Optional[Dict[str, str]] = None, 
+    def __init__(self, base_url: Union[str, HttpUrl], headers: Optional[Dict[str, str]] = None, 
                  timeout: float = 30.0, max_retries: int = 3):
         """初始化HTTP客户端"""
-        self.base_url = base_url.rstrip('/')
+        # 处理HttpUrl和字符串类型
+        if isinstance(base_url, HttpUrl):
+            self.base_url = str(base_url).rstrip('/')
+        else:
+            self.base_url = base_url.rstrip('/')
         self.headers = headers or {}
         self.timeout = timeout
         self.max_retries = max_retries

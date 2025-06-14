@@ -37,7 +37,7 @@ class DeepSeekLLMAdapter(BaseChatModel):
     async def _ensure_initialized(self) -> None:
         """确保客户端已初始化"""
         if not self._initialized:
-            await self.deepseek_client.connect()
+            # DeepSeekClient在__init__时就已经初始化，无需额外connect
             self._initialized = True
     
     def _convert_messages(self, messages: List[Dict[str, Any]]) -> List[Message]:
@@ -78,12 +78,14 @@ class DeepSeekLLMAdapter(BaseChatModel):
             response: DeepSeek LLM响应
             
         Returns:
-            Qwen-Agent格式的响应
+            Qwen-Agent格式的响应 - 确保返回消息列表
         """
-        return [{
+        # 确保返回的是标准的OpenAI格式消息列表
+        message = {
             'role': 'assistant',
             'content': response.content
-        }]
+        }
+        return [message]
     
     def chat(
         self, 
@@ -102,8 +104,35 @@ class DeepSeekLLMAdapter(BaseChatModel):
             响应消息列表
         """
         try:
-            # 运行异步聊天方法
-            return asyncio.run(self._async_chat(messages, functions, **kwargs))
+            # 创建一个新的事件循环来处理异步调用
+            import threading
+            import queue
+            
+            result_queue = queue.Queue()
+            
+            def run_in_thread():
+                # 在新线程中创建新的事件循环
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    result = new_loop.run_until_complete(self._async_chat(messages, functions, **kwargs))
+                    result_queue.put(('success', result))
+                except Exception as e:
+                    result_queue.put(('error', e))
+                finally:
+                    new_loop.close()
+            
+            # 在新线程中运行异步代码
+            thread = threading.Thread(target=run_in_thread)
+            thread.start()
+            thread.join()
+            
+            # 获取结果
+            status, result = result_queue.get()
+            if status == 'success':
+                return result
+            else:
+                raise result
         except Exception as e:
             logger.error(f"聊天过程中发生错误: {e}")
             return [{'role': 'assistant', 'content': f'抱歉，处理您的请求时发生错误: {str(e)}'}]
@@ -132,19 +161,23 @@ class DeepSeekLLMAdapter(BaseChatModel):
         
         try:
             # 调用DeepSeek客户端
+            # 注意：当前DeepSeekClient暂不支持函数调用，统一使用普通聊天
             if functions:
-                # 有函数调用的情况
-                response = await self.deepseek_client.chat_completion_with_functions(
-                    messages=deepseek_messages,
-                    functions=functions,
-                    **kwargs
-                )
-            else:
-                # 普通聊天
-                response = await self.deepseek_client.chat_completion(
-                    messages=deepseek_messages,
-                    **kwargs
-                )
+                logger.warning("DeepSeek客户端暂不支持函数调用，将忽略functions参数")
+            
+            # 过滤出DeepSeek支持的参数
+            supported_params = {
+                'model': kwargs.get('model'),
+                'temperature': kwargs.get('temperature'), 
+                'max_tokens': kwargs.get('max_tokens')
+            }
+            # 移除None值
+            supported_params = {k: v for k, v in supported_params.items() if v is not None}
+            
+            response = await self.deepseek_client.chat_completion(
+                messages=deepseek_messages,
+                **supported_params
+            )
             
             # 转换响应格式
             return self._convert_response(response)
@@ -169,4 +202,37 @@ class DeepSeekLLMAdapter(BaseChatModel):
         """关闭客户端连接"""
         if self._initialized:
             await self.deepseek_client.close()
-            self._initialized = False 
+            self._initialized = False
+    
+    def _chat_no_stream(
+        self,
+        messages: List[Dict[str, Any]],
+        functions: Optional[List[Dict[str, Any]]] = None,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """非流式聊天（Qwen-Agent抽象方法实现）"""
+        return self.chat(messages, functions, **kwargs)
+    
+    def _chat_stream(
+        self,
+        messages: List[Dict[str, Any]],
+        functions: Optional[List[Dict[str, Any]]] = None,
+        **kwargs
+    ):
+        """流式聊天（Qwen-Agent抽象方法实现）"""
+        # 目前返回非流式结果，后续可扩展为真正的流式处理
+        response = self.chat(messages, functions, **kwargs)
+        # 确保每次yield都是消息列表
+        if response:
+            yield response
+        else:
+            yield [{'role': 'assistant', 'content': ''}]
+    
+    def _chat_with_functions(
+        self,
+        messages: List[Dict[str, Any]],
+        functions: List[Dict[str, Any]],
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """带函数调用的聊天（Qwen-Agent抽象方法实现）"""
+        return self.chat(messages, functions, **kwargs) 

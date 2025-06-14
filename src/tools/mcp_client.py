@@ -27,7 +27,7 @@ class MCPClient:
         self.config = config_manager
         self.session: Optional[aiohttp.ClientSession] = None
         self.parser = SSEParser()
-        self.status = MCPClientStatus(server_url=self.config.mcp.server_url)
+        self.status = MCPClientStatus(server_url=str(self.config.mcp.server_url))
         self.request_id = 0
         self.available_tools: Dict[str, ToolDefinition] = {}
     
