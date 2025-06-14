@@ -87,10 +87,21 @@ Type 'quit' to exit, or any message to test the setup:
 
 ```
 src/
-├── agent/          # Qwen-Agent integration
+├── agent/          # Qwen-Agent integration & LLM clients
+│   ├── deepseek_client.py    # DeepSeek API integration
+│   ├── function_calling.py   # Function calling support
+│   └── models.py            # Agent data models
 ├── config/         # Configuration management
-├── memory/         # mem0 memory management
-├── tools/          # MCP tools and utilities
+├── memory/         # mem0 memory management (✅ Completed)
+│   ├── models.py           # Memory data models
+│   ├── mem0_client.py      # mem0 API client wrapper
+│   ├── manager.py          # Memory manager core
+│   └── service.py          # High-level memory service
+├── tools/          # MCP tools and utilities (✅ Completed)
+│   ├── models.py           # MCP protocol models
+│   ├── sse_parser.py       # SSE event parser
+│   ├── mcp_client.py       # MCP SSE client
+│   └── tool_manager.py     # Tool execution manager
 ├── main.py         # Application entry point
 └── __init__.py
 ```
@@ -166,14 +177,15 @@ uv run mypy src/
 
 This is an MVP implementation with the following development roadmap:
 
-1. ✅ **Project Setup** (Current)
-2. 🔄 **LLM Integration** (Next: Task 2)
-3. 🔄 **MCP Client Implementation** (Task 3)
-4. 🔄 **Memory Management** (Task 4)
-5. 🔄 **CLI Interface Enhancement** (Task 5)
-6. 🔄 **Error Handling & Logging** (Task 6)
-7. 🔄 **Documentation** (Task 7)
-8. 🔄 **Testing Suite** (Task 8)
+1. ✅ **Project Setup & Configuration** (Completed)
+2. ✅ **DeepSeek LLM Integration** (Completed)
+3. ✅ **MCP SSE Client Implementation** (Completed)
+4. ✅ **Memory Management (mem0)** (Completed)
+5. 🔄 **Qwen-Agent Core Integration** (Current: Task 6)
+6. 🔄 **CLI Interface Enhancement** (Task 7)
+7. 🔄 **Error Handling & Logging** (Task 8)
+8. 🔄 **Documentation & Examples** (Task 9)
+9. 🔄 **Complete Testing Suite** (Task 10)
 
 ## 🤝 Contributing
 
