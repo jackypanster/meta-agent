@@ -50,6 +50,7 @@ cp .env.example .env
 # Required:
 # DEEPSEEK_API_KEY=your_deepseek_api_key_here
 # MCP_SERVER_URL=https://mcp.context7.com/sse
+# MEM0_API_KEY=your_mem0_api_key_here
 ```
 
 ### 4. Run the Application
@@ -76,19 +77,50 @@ Starting the AI assistant...
 
 Type 'quit' to exit, or any message to test the setup:
 > Hello, how can you help me?
-📝 You said: Hello, how can you help me?
-🤖 [AI response will appear here once LLM integration is complete]
+🤖 Hello! I'm an AI assistant powered by Qwen-Agent framework with DeepSeek's reasoning model. 
+I can help you with various tasks including:
+- Answering questions and having conversations
+- Using external tools via Context7 MCP Server
+- Remembering our conversation history through mem0
 
 > quit
 👋 Goodbye!
 ```
 
+## 🤖 Core Agent Features
+
+The MVP now includes a fully integrated Qwen-Agent with the following capabilities:
+
+### LLM Integration
+- **DeepSeek-R1-0528 Model**: Advanced reasoning capabilities via the `deepseek-reasoner` model
+- **Async Chat Completion**: Non-blocking message processing
+- **Streaming Support**: Real-time response generation
+
+### Tool Integration  
+- **MCP Tool Adapter**: Automatic discovery and wrapping of Context7 MCP tools
+- **Dynamic Tool Loading**: Tools are discovered at runtime and made available to the agent
+- **Error Handling**: Graceful handling of tool failures with informative messages
+
+### Memory Management
+- **Conversation Memory**: Automatic extraction and storage of conversation facts
+- **Context Retrieval**: Relevant memories are included in agent prompts
+- **Persistent Storage**: Memories persist across sessions via mem0
+
+### Agent Factory
+- **Simple Creation**: Easy agent instantiation with `create_agent()` or `quick_chat()`
+- **Configuration Management**: Centralized config through `ConfigManager`
+- **Session Management**: Multiple conversation sessions with memory isolation
+
 ## 🏗️ Architecture
 
 ```
 src/
-├── agent/          # Qwen-Agent integration & LLM clients
+├── agent/          # Qwen-Agent integration & core agent logic (✅ Completed)
 │   ├── deepseek_client.py    # DeepSeek API integration
+│   ├── llm_adapter.py        # DeepSeek to Qwen-Agent adapter
+│   ├── tool_adapter.py       # MCP to Qwen-Agent tool adapter
+│   ├── core_agent.py         # Main QwenAgentMVP class
+│   ├── factory.py            # Agent factory and configuration
 │   ├── function_calling.py   # Function calling support
 │   └── models.py            # Agent data models
 ├── config/         # Configuration management
@@ -132,21 +164,25 @@ src/
 Create a `.env` file in the project root with:
 
 ```env
-# Required: DeepSeek API key for LLM access
+# Required: DeepSeek API key for LLM access (DeepSeek-R1-0528 model)
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
 # Required: Context7 MCP server URL
 MCP_SERVER_URL=https://mcp.context7.com/sse
 
+# Required: mem0 API key for memory management
+MEM0_API_KEY=your_mem0_api_key_here
+
 # Optional: Customize behavior
 LOG_LEVEL=INFO
-MEMORY_COLLECTION_NAME=qwen_agent_conversations
+DEEPSEEK_MODEL=deepseek-reasoner  # DeepSeek-R1-0528 reasoning model
 ```
 
 ### API Keys Setup
 
-1. **DeepSeek API**: Get your API key from [DeepSeek Platform](https://platform.deepseek.com)
+1. **DeepSeek API**: Get your API key from [DeepSeek Platform](https://platform.deepseek.com/api_keys) for DeepSeek-R1-0528 model access
 2. **Context7 MCP**: Access via the provided server URL (no additional key needed)
+3. **mem0 API**: Get your API key from [mem0.ai](https://mem0.ai/) for memory management
 
 ## 🧪 Development
 
@@ -181,8 +217,8 @@ This is an MVP implementation with the following development roadmap:
 2. ✅ **DeepSeek LLM Integration** (Completed)
 3. ✅ **MCP SSE Client Implementation** (Completed)
 4. ✅ **Memory Management (mem0)** (Completed)
-5. 🔄 **Qwen-Agent Core Integration** (Current: Task 6)
-6. 🔄 **CLI Interface Enhancement** (Task 7)
+5. ✅ **Qwen-Agent Core Integration** (Completed)
+6. 🔄 **CLI Interface Enhancement** (Current: Task 7)
 7. 🔄 **Error Handling & Logging** (Task 8)
 8. 🔄 **Documentation & Examples** (Task 9)
 9. 🔄 **Complete Testing Suite** (Task 10)

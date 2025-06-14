@@ -44,7 +44,7 @@ class ConfigValidator:
             return False
         
         # 检查是否包含非法字符
-        if not re.match(r'^[a-zA-Z0-9\-_\.]+$', api_key.strip()):
+        if not re.match(r'^[a-zA-Z0-9\-_\.%]+$', api_key.strip()):
             self.errors.append(
                 ConfigValidationError(f"{provider}_api_key", "API密钥包含非法字符")
             )
@@ -85,6 +85,9 @@ class ConfigValidator:
         
         # 验证MCP配置
         self.validate_url(str(settings.mcp.server_url), "mcp_server_url")
+        
+        # 验证mem0配置
+        self.validate_api_key(settings.mem0.api_key, "mem0")
         
         return len(self.errors) == 0, self.errors.copy()
     

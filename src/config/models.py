@@ -11,7 +11,6 @@ class DeepSeekConfig(BaseModel):
     """DeepSeek API配置"""
     
     model_config = ConfigDict(
-        env_prefix="QWEN_",
         case_sensitive=False,
         validate_assignment=True
     )
@@ -70,6 +69,20 @@ class McpConfig(BaseModel):
     )
 
 
+class Mem0Config(BaseModel):
+    """mem0内存管理配置"""
+    
+    api_key: str = Field(..., description="mem0 API密钥")
+    
+    @field_validator('api_key')
+    @classmethod
+    def validate_api_key(cls, v: str) -> str:
+        """验证API密钥格式"""
+        if not v or len(v.strip()) == 0:
+            raise ValueError("mem0 API密钥不能为空")
+        return v.strip()
+
+
 class AppConfig(BaseModel):
     """应用配置"""
     
@@ -88,11 +101,11 @@ class Settings(BaseModel):
     """应用程序设置"""
     
     model_config = ConfigDict(
-        env_prefix="QWEN_",
         case_sensitive=False,
         validate_assignment=True
     )
     
     deepseek: DeepSeekConfig
     mcp: McpConfig = Field(default_factory=McpConfig)
+    mem0: Mem0Config
     app: AppConfig = Field(default_factory=AppConfig) 

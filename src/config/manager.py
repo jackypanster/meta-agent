@@ -8,7 +8,7 @@ from pathlib import Path
 import logging
 
 from .models import Settings
-from .loader import EnvironmentLoader
+from .loader import ConfigLoader
 from .validator import ConfigValidator, ConfigValidationError
 
 
@@ -17,21 +17,16 @@ logger = logging.getLogger(__name__)
 class ConfigManager:
     """配置管理器"""
     
-    def __init__(self, env_file: Optional[str] = None):
+    def __init__(self, env_file: Optional[Path] = None):
         """初始化配置管理器"""
         self._settings: Optional[Settings] = None
-        self._loader = EnvironmentLoader(env_file)
+        self._loader = ConfigLoader(env_file)
         self._validator = ConfigValidator()
         self._initialized = False
     
     def initialize(self) -> None:
         """初始化配置"""
         try:
-            # 加载环境变量
-            env_loaded = self._loader.load_env_file()
-            if env_loaded:
-                logger.info("环境变量文件加载成功")
-            
             # 加载配置
             settings = self._loader.load_settings()
             
@@ -75,15 +70,21 @@ class ConfigManager:
         return self.settings.mcp
     
     @property
+    def mem0(self):
+        """获取mem0配置"""
+        return self.settings.mem0
+    
+    @property
     def app(self):
         """获取应用配置"""
         return self.settings.app
     
     def get_env_info(self) -> Dict[str, Any]:
         """获取环境信息"""
+        env_file_path = Path.cwd() / ".env"
         return {
-            "env_file_exists": Path(self._loader.env_file).exists(),
-            "env_file_path": self._loader.env_file,
+            "env_file_exists": env_file_path.exists(),
+            "env_file_path": str(env_file_path),
             "initialized": self._initialized,
             "has_settings": self._settings is not None
         }
