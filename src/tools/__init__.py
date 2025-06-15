@@ -1,4 +1,5 @@
-"""MCP工具集成模块
+"""工具集成模块
 
-提供与Context7 MCP服务器的连接和工具调用功能。
+提供Qwen-Agent自定义工具的实现。
+MCP (Model Context Protocol) 功能通过官方Qwen-Agent内置支持提供。
 """

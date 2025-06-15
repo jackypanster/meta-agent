@@ -1,12 +1,12 @@
 # Qwen-Agent MVP
 
-🤖 A command-line AI assistant built with the Qwen-Agent framework, DeepSeek LLM, Context7 MCP Server, and mem0 memory management.
+🤖 A command-line AI assistant built with the Qwen-Agent framework, DeepSeek LLM, official MCP servers (time/fetch/memory), and mem0 memory management.
 
 ## ✨ Features
 
 - **Qwen-Agent Framework**: Core AI agent functionality
 - **DeepSeek LLM**: Powerful language model integration via API
-- **Context7 MCP Server**: Server-side event streaming for real-time context
+- **Official MCP Servers**: Time, fetch, and memory services via standard MCP protocol
 - **mem0 Memory Management**: Persistent memory for conversations
 - **Rich CLI Interface**: Beautiful command-line interaction using Rich library
 - **Async Architecture**: Non-blocking operations with aiohttp
@@ -49,7 +49,7 @@ cp .env.example .env
 # Edit .env with your actual API keys
 # Required:
 # DEEPSEEK_API_KEY=your_deepseek_api_key_here
-# MCP_SERVER_URL=https://mcp.context7.com/sse
+# MCP服务器通过官方Qwen-Agent内置支持自动配置
 # MEM0_API_KEY=your_mem0_api_key_here
 ```
 
@@ -80,7 +80,7 @@ Type 'quit' to exit, or any message to test the setup:
 🤖 Hello! I'm an AI assistant powered by Qwen-Agent framework with DeepSeek's reasoning model. 
 I can help you with various tasks including:
 - Answering questions and having conversations
-- Using external tools via Context7 MCP Server
+- Using external tools via official MCP servers (time, fetch, memory)
 - Remembering our conversation history through mem0
 
 > quit
@@ -97,7 +97,7 @@ The MVP now includes a fully integrated Qwen-Agent with the following capabiliti
 - **Streaming Support**: Real-time response generation
 
 ### Tool Integration  
-- **MCP Tool Adapter**: Automatic discovery and wrapping of Context7 MCP tools
+- **MCP Integration**: Official Qwen-Agent support for time, fetch, and memory MCP servers
 - **Dynamic Tool Loading**: Tools are discovered at runtime and made available to the agent
 - **Error Handling**: Graceful handling of tool failures with informative messages
 
@@ -167,8 +167,8 @@ Create a `.env` file in the project root with:
 # Required: DeepSeek API key for LLM access (DeepSeek-R1-0528 model)
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
-# Required: Context7 MCP server URL
-MCP_SERVER_URL=https://mcp.context7.com/sse
+# MCP服务器通过官方Qwen-Agent内置支持自动配置
+# 无需手动配置MCP服务器URL
 
 # Required: mem0 API key for memory management
 MEM0_API_KEY=your_mem0_api_key_here
@@ -181,7 +181,7 @@ DEEPSEEK_MODEL=deepseek-reasoner  # DeepSeek-R1-0528 reasoning model
 ### API Keys Setup
 
 1. **DeepSeek API**: Get your API key from [DeepSeek Platform](https://platform.deepseek.com/api_keys) for DeepSeek-R1-0528 model access
-2. **Context7 MCP**: Access via the provided server URL (no additional key needed)
+2. **Official MCP Servers**: Automatically configured via Qwen-Agent (no additional setup needed)
 3. **mem0 API**: Get your API key from [mem0.ai](https://mem0.ai/) for memory management
 
 ## 🧪 Development
@@ -241,7 +241,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Qwen-Agent Documentation](https://github.com/QwenLM/Qwen-Agent)
 - [DeepSeek API Documentation](https://platform.deepseek.com/docs)
-- [Context7 MCP Server](https://mcp.context7.com)
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - [mem0 Documentation](https://docs.mem0.ai)
 
 ## 📞 Support

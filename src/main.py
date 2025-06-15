@@ -4,270 +4,179 @@ Qwen-Agent MVP - 简洁直观实现
 
 基于官方Qwen-Agent框架的最简洁实现：
 - 直接使用Assistant类
-- 用@register_tool注册工具
+- 模块化工具系统
 - 简单的内存管理
 - 直观的CLI界面
+- 使用最新DeepSeek-R1-0528推理模型
 """
 
-import os
-import json
 import time
-from typing import Dict, List
-from dotenv import load_dotenv
+from typing import Dict
 
 # Qwen-Agent imports
 from qwen_agent.agents import Assistant
-from qwen_agent.tools.base import BaseTool, register_tool
 from qwen_agent.utils.output_beautify import typewriter_print
 
-# 加载环境变量
-load_dotenv()
+# 导入工具类 - 使用绝对导入
+from src.tools.qwen_tools.memory_tools import get_memory_store
 
-# 简单的内存存储 - 直接用字典，不搞复杂的
-MEMORY_STORE = {
-    'facts': [],      # 用户事实信息
-    'preferences': [], # 用户偏好
-    'history': []     # 对话历史
-}
+# 导入配置管理
+from src.config.settings import get_config, ConfigError
 
-
-@register_tool('save_info')
-class SaveInfoTool(BaseTool):
-    """保存用户信息工具"""
-    description = '保存用户提到的重要信息，如姓名、兴趣爱好、工作等'
-    parameters = [{
-        'name': 'info',
-        'type': 'string', 
-        'description': '要保存的信息内容',
-        'required': True
-    }, {
-        'name': 'type',
-        'type': 'string',
-        'description': '信息类型：fact(事实) 或 preference(偏好)',
-        'required': False
-    }]
-
-    def call(self, params: str, **kwargs) -> str:
-        try:
-            data = json.loads(params)
-            info = data['info']
-            info_type = data.get('type', 'fact')
-            
-            # 简单保存到内存
-            entry = {
-                'content': info,
-                'timestamp': time.time(),
-                'time_str': time.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            if info_type == 'preference':
-                MEMORY_STORE['preferences'].append(entry)
-            else:
-                MEMORY_STORE['facts'].append(entry)
-            
-            return json.dumps({
-                'status': 'saved',
-                'message': f'已保存{info_type}: {info}'
-            }, ensure_ascii=False)
-            
-        except Exception as e:
-            return json.dumps({'error': f'保存失败: {str(e)}'})
+# 导入UI帮助函数
+from src.ui import show_welcome, show_help, show_memory, clear_screen
 
 
-@register_tool('recall_info') 
-class RecallInfoTool(BaseTool):
-    """回忆用户信息工具"""
-    description = '搜索之前保存的用户信息'
-    parameters = [{
-        'name': 'query',
-        'type': 'string',
-        'description': '要搜索的关键词，如"姓名"、"爱好"等',
-        'required': True
-    }]
-
-    def call(self, params: str, **kwargs) -> str:
-        try:
-            data = json.loads(params)
-            query = data['query'].lower()
-            
-            # 简单的关键词搜索
-            results = []
-            
-            for fact in MEMORY_STORE['facts']:
-                if query in fact['content'].lower():
-                    results.append(fact)
-                    
-            for pref in MEMORY_STORE['preferences']:
-                if query in pref['content'].lower():
-                    results.append(pref)
-            
-            if results:
-                return json.dumps({
-                    'found': True,
-                    'count': len(results),
-                    'results': results[-3:]  # 最近3条
-                }, ensure_ascii=False)
-            else:
-                return json.dumps({
-                    'found': False,
-                    'message': '没有找到相关信息'
-                })
-                
-        except Exception as e:
-            return json.dumps({'error': f'搜索失败: {str(e)}'})
+class APIConnectionError(Exception):
+    """API连接错误"""
 
 
-@register_tool('calculate')
-class CalculatorTool(BaseTool):
-    """计算器工具"""
-    description = '执行数学计算'
-    parameters = [{
-        'name': 'expression',
-        'type': 'string',
-        'description': '数学表达式，如 "2 + 3" 或 "sin(3.14/2)"',
-        'required': True
-    }]
+class ModelConfigError(Exception):
+    """模型配置错误"""
 
-    def call(self, params: str, **kwargs) -> str:
-        try:
-            data = json.loads(params)
-            expression = data['expression']
-            
-            # 安全计算 - 只允许数学运算
-            import math
-            allowed_names = {
-                k: v for k, v in math.__dict__.items() if not k.startswith("__")
-            }
-            allowed_names.update({"abs": abs, "round": round})
-            
-            result = eval(expression, {"__builtins__": {}}, allowed_names)
-            
-            return json.dumps({
-                'expression': expression,
-                'result': result
-            }, ensure_ascii=False)
-            
-        except Exception as e:
-            return json.dumps({'error': f'计算错误: {str(e)}'})
+
+
 
 
 def create_llm_config() -> Dict:
-    """创建LLM配置 - 简单直接"""
-    # 优先使用DeepSeek
-    if api_key := os.getenv('DEEPSEEK_API_KEY'):
-        print("✓ 使用DeepSeek API")
-        return {
-            'model': 'deepseek-chat',
-            'model_server': 'https://api.deepseek.com/v1',
-            'api_key': api_key,
-            'generate_cfg': {
-                'top_p': 0.8,
-                'max_tokens': 2000,
-                'temperature': 0.7
-            }
+    """创建LLM配置 - 从.env文件加载"""
+    
+    try:
+        config = get_config()
+    except ConfigError as e:
+        raise ModelConfigError(f"配置加载失败: {str(e)}")
+    
+    # 检查是否要使用R1推理模型
+    use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
+    
+    # 检查DeepSeek API密钥
+    try:
+        api_key = config.require('DEEPSEEK_API_KEY')
+    except ConfigError:
+        raise ModelConfigError(
+            "❌ 未找到DeepSeek API密钥！\n"
+            "请在.env文件中设置: DEEPSEEK_API_KEY=your-api-key"
+        )
+    
+    print("🔍 检测到DeepSeek API密钥")
+    
+    base_url = 'https://api.deepseek.com/v1'
+    
+    if use_r1:
+        model = 'deepseek-reasoner'  # R1-0528推理模型
+        model_name = "DeepSeek R1-0528 推理模型"
+    else:
+        model = 'deepseek-chat'  # V3-0324 稳定模型
+        model_name = "DeepSeek V3 稳定模型"
+    
+    # 暂时跳过连接测试以简化演示
+    print(f"⚡ 使用{model_name}(跳过连接测试)")
+    
+    return {
+        'model': model,
+        'model_server': base_url,
+        'api_key': api_key,
+        'generate_cfg': {
+            'top_p': 0.8,
+            'max_tokens': 2000,
+            'temperature': 0.7
         }
-    
-    # 备选OpenRouter
-    if api_key := os.getenv('OPENROUTER_API_KEY'):
-        print("✓ 使用OpenRouter API")
-        return {
-            'model': 'deepseek/deepseek-chat', 
-            'model_server': 'https://openrouter.ai/api/v1',
-            'api_key': api_key,
-            'generate_cfg': {
-                'top_p': 0.8,
-                'max_tokens': 2000,
-                'temperature': 0.7
-            }
-        }
-    
-    raise ValueError("需要设置DEEPSEEK_API_KEY或OPENROUTER_API_KEY环境变量")
-
-
-def show_welcome():
-    """显示欢迎信息"""
-    print("🤖 Qwen-Agent MVP - 简洁版")
-    print("=" * 50)
-    print("这是一个基于Qwen-Agent的AI助手，具有：")
-    print("• 💬 智能对话")
-    print("• 🧠 记忆功能 - 记住您的信息")
-    print("• 🧮 计算功能")
-    print("• 📝 信息保存和回忆")
-    print("\n💡 试试这些命令:")
-    print("- 你好，我叫张三，喜欢编程")
-    print("- 我的名字是什么？")
-    print("- 计算 15 * 8 + 32")
-    print("- help (显示帮助)")
-    print("- quit (退出)")
-
-
-def show_help():
-    """显示帮助信息"""
-    print("\n📋 可用命令:")
-    print("• quit/exit/q - 退出程序")
-    print("• help/h - 显示此帮助")
-    print("• clear/cls - 清屏")
-    print("• memory - 显示保存的信息")
-    print("\n🤖 AI助手功能:")
-    print("• 自动记住您提到的个人信息")
-    print("• 可以回忆之前的对话内容") 
-    print("• 执行数学计算")
-    print("• 日常对话和问答")
-
-
-def show_memory():
-    """显示保存的记忆"""
-    print("\n🧠 已保存的信息:")
-    
-    if MEMORY_STORE['facts']:
-        print("\n📋 事实信息:")
-        for i, fact in enumerate(MEMORY_STORE['facts'][-5:], 1):
-            print(f"  {i}. {fact['content']} ({fact['time_str']})")
-    
-    if MEMORY_STORE['preferences']:
-        print("\n❤️ 偏好信息:")
-        for i, pref in enumerate(MEMORY_STORE['preferences'][-5:], 1):
-            print(f"  {i}. {pref['content']} ({pref['time_str']})")
-    
-    if not MEMORY_STORE['facts'] and not MEMORY_STORE['preferences']:
-        print("  还没有保存任何信息")
+    }
 
 
 def main():
-    """主函数 - 保持简单"""
+    """主函数 - 专注于程序流程控制"""
     try:
         # 1. 显示欢迎界面
         show_welcome()
         
-        # 2. 创建Agent
-        print("\n🔧 正在初始化...")
-        llm_cfg = create_llm_config()
+        # 2. 创建Agent (with enhanced error handling)
+        print("\n🔧 正在初始化AI模型...")
         
-        # 系统提示 - 简洁明了
-        system_message = '''你是一个友好的AI助手。功能包括：
-
-1. 💾 **主动记忆**: 当用户提到个人信息时，使用save_info工具保存
-2. 🔍 **信息回忆**: 当用户询问之前的信息时，使用recall_info工具搜索
-3. 🧮 **数学计算**: 使用calculate工具进行计算
-4. 💬 **日常对话**: 友好、自然的交流
-
-重要提示：
-- 用户首次介绍姓名、爱好、工作等信息时，主动保存
-- 当用户问"我是谁"、"我的爱好"等问题时，先搜索记忆
-- 保持对话自然流畅，不要过度使用工具'''
-
-        # 创建Agent
-        tools = ['save_info', 'recall_info', 'calculate']
-        agent = Assistant(
-            llm=llm_cfg,
-            system_message=system_message,
-            function_list=tools
-        )
-        print("✓ Agent初始化成功！")
+        try:
+            llm_cfg = create_llm_config()
+        except ModelConfigError as e:
+            print(f"\n❌ 模型配置失败:\n{str(e)}")
+            return
+        except Exception as e:
+            print(f"\n❌ 初始化失败: {str(e)}")
+            print("请检查网络连接和环境配置")
+            return
         
-        # 3. 对话循环
+        # 系统提示 - 针对推理模型优化，简化指令
+        system_message = '''你是一个友好的AI助手，具有强大的推理能力。
+
+核心功能：
+1. 智能对话和问题解答
+2. 记住用户信息 - 当用户介绍个人信息时使用custom_save_info工具
+3. 回忆信息 - 当用户询问之前信息时使用custom_recall_info工具  
+4. 数学计算 - 使用custom_math_calc工具
+5. 代码执行 - 使用code_interpreter工具执行Python代码、数据分析、绘图等
+6. MCP服务集成 - 通过官方Qwen-Agent MCP支持访问外部服务
+
+MCP服务说明：
+- time服务器: 获取当前时间信息（亚洲/上海时区）
+- fetch服务器: 可以抓取网页内容，获取实时信息
+- memory服务器: 提供外部内存存储功能
+
+使用场景：
+- 当用户询问"现在几点"、"当前时间"时，系统会自动使用time服务
+- 当用户要求"抓取网页"、"获取网页内容"、"访问网站"时，系统会自动使用fetch服务
+- 当用户需要"外部存储"、"持久化数据"时，系统会自动使用memory服务
+- 当用户需要"执行代码"、"数据分析"、"绘图"、"计算"时，系统会自动使用code_interpreter
+- MCP工具会根据需要自动调用，无需手动指定
+
+行为准则：
+- 自然友好的交流
+- 根据用户需求智能选择合适的工具
+- 保持对话流畅，适度使用工具
+- 利用MCP服务和代码执行提供实时、准确的信息和分析'''
+
+        # 创建Agent (with error handling) - 参考官方Qwen3示例
+        try:
+            # 使用官方Qwen-Agent MCP集成方式，参考官方示例
+            tools = [
+                'custom_save_info', 
+                'custom_recall_info', 
+                'custom_math_calc',
+                {
+                    'mcpServers': {  # 官方MCP配置格式
+                        'time': {
+                            'command': 'uvx',
+                            'args': ['mcp-server-time', '--local-timezone=Asia/Shanghai']
+                        },
+                        'fetch': {
+                            'command': 'uvx',
+                            'args': ['mcp-server-fetch']
+                        },
+                        'memory': {
+                            'command': 'npx',
+                            'args': ['-y', '@modelcontextprotocol/server-memory']
+                        }
+                    }
+                },
+                'code_interpreter',  # 内置代码解释器工具
+            ]
+            agent = Assistant(
+                llm=llm_cfg,
+                system_message=system_message,
+                function_list=tools,
+                name='DeepSeek增强版AI助手',
+                description='基于DeepSeek模型的智能助手，支持记忆、计算、MCP服务和代码执行功能'
+            )
+            print("✓ AI助手初始化成功！")
+        except Exception as e:
+            print(f"❌ Agent创建失败: {str(e)}")
+            print("可能的原因: API配置错误或模型服务不可用")
+            return
+        
+        # 3. 对话循环 (with enhanced error handling)
         messages = []
-        print("\n✨ 开始对话吧！\n")
+        memory_store = get_memory_store()
+        config = get_config()
+        use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
+        model_display = "DeepSeek-R1推理模型" if use_r1 else "DeepSeek-V3稳定模型"
+        print(f"\n✨ 开始对话吧！(使用{model_display})\n")
         
         while True:
             # 获取用户输入
@@ -285,8 +194,7 @@ def main():
                 show_help()
                 continue
             elif user_input.lower() in ['clear', 'cls', '清屏']:
-                os.system('clear' if os.name != 'nt' else 'cls')
-                show_welcome()
+                clear_screen()
                 continue
             elif user_input.lower() in ['memory', 'mem', '记忆']:
                 show_memory()
@@ -303,35 +211,71 @@ def main():
             try:
                 # 调用Agent并流式显示
                 response_text = ""
-                for response in agent.run(messages=messages):
+                response_messages = agent.run(messages=messages)
+                
+                for response in response_messages:
                     response_text = typewriter_print(response, response_text)
                 
-                # 添加响应到历史
-                messages.extend(response)
+                # 清理并添加响应到历史 - 特别处理R1模型的reasoning_content
+                clean_messages = []
+                for msg in response_messages:
+                    if isinstance(msg, dict):
+                        # 创建清理后的消息副本，移除reasoning_content
+                        clean_msg = {k: v for k, v in msg.items() if k != 'reasoning_content'}
+                        clean_messages.append(clean_msg)
+                    else:
+                        clean_messages.append(msg)
+                
+                messages.extend(clean_messages)
                 
                 # 保存对话到简单历史记录
-                MEMORY_STORE['history'].append({
+                memory_store['history'].append({
                     'user': user_input,
                     'assistant': response_text,
                     'timestamp': time.time()
                 })
                 
                 # 保持历史记录不超过50条
-                if len(MEMORY_STORE['history']) > 50:
-                    MEMORY_STORE['history'] = MEMORY_STORE['history'][-50:]
+                if len(memory_store['history']) > 50:
+                    memory_store['history'] = memory_store['history'][-50:]
                 
                 print()  # 换行
                 
+            except requests.exceptions.RequestException as e:
+                print(f"\n❌ 网络连接错误: {str(e)}")
+                print("请检查网络连接，稍后重试")
+            except APIConnectionError as e:
+                print(f"\n❌ API调用失败: {str(e)}")
+                print("请检查API服务状态和配置")
             except Exception as e:
-                print(f"\n❌ 出错了: {str(e)}")
-                print("请检查网络连接和API配置")
+                error_msg = str(e)
+                # 特别处理DeepSeek R1模型的reasoning_content错误
+                if 'reasoning_content' in error_msg:
+                    print("\n❌ DeepSeek R1模型格式错误")
+                    print("正在清理消息历史并重试...")
+                    # 清理messages中可能的reasoning_content
+                    cleaned_messages = []
+                    for msg in messages:
+                        if isinstance(msg, dict) and 'reasoning_content' in msg:
+                            clean_msg = {k: v for k, v in msg.items() if k != 'reasoning_content'}
+                            cleaned_messages.append(clean_msg)
+                        else:
+                            cleaned_messages.append(msg)
+                    messages = cleaned_messages
+                    continue
+                else:
+                    print(f"\n❌ 处理出错: {error_msg}")
+                    print("请检查输入并重试")
     
+    except KeyboardInterrupt:
+        print("\n\n👋 程序被用户中断，再见！")
     except Exception as e:
-        print(f"\n❌ 初始化失败: {str(e)}")
+        print(f"\n❌ 程序异常退出: {str(e)}")
         print("\n请检查:")
         print("1. 网络连接是否正常")
         print("2. API密钥是否正确设置")
         print("3. 依赖是否正确安装")
+        print("4. DeepSeek API服务是否可用")
 
 
 if __name__ == "__main__":
