@@ -7,6 +7,7 @@
 - **Qwen-Agent Framework**: Core AI agent functionality
 - **DeepSeek LLM**: Powerful language model integration via API
 - **Official MCP Servers**: Time, fetch, and memory services via standard MCP protocol
+- **Dynamic MCP Configuration**: External JSON-based configuration with hot reload
 - **mem0 Memory Management**: Persistent memory for conversations
 - **Rich CLI Interface**: Beautiful command-line interaction using Rich library
 - **Async Architecture**: Non-blocking operations with aiohttp
@@ -123,7 +124,10 @@ src/
 │   ├── factory.py            # Agent factory and configuration
 │   ├── function_calling.py   # Function calling support
 │   └── models.py            # Agent data models
-├── config/         # Configuration management
+├── config/         # Configuration management (✅ Completed)
+│   ├── mcp_config.py       # MCP configuration loader with caching
+│   ├── mcp_validator.py    # Configuration validation system
+│   └── mcp_watcher.py      # Dynamic configuration updates & hot reload
 ├── memory/         # mem0 memory management (✅ Completed)
 │   ├── models.py           # Memory data models
 │   ├── mem0_client.py      # mem0 API client wrapper
@@ -134,8 +138,14 @@ src/
 │   ├── sse_parser.py       # SSE event parser
 │   ├── mcp_client.py       # MCP SSE client
 │   └── tool_manager.py     # Tool execution manager
-├── main.py         # Application entry point
+├── main.py         # Application entry point with dynamic MCP loading
 └── __init__.py
+
+config/             # External configuration files
+└── mcp_servers.json        # MCP server configurations
+
+docs/               # Documentation
+└── MCP_CONFIGURATION_SYSTEM.md  # Detailed MCP config system docs
 ```
 
 ## 📦 Dependencies
@@ -167,9 +177,6 @@ Create a `.env` file in the project root with:
 # Required: DeepSeek API key for LLM access (DeepSeek-R1-0528 model)
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
-# MCP服务器通过官方Qwen-Agent内置支持自动配置
-# 无需手动配置MCP服务器URL
-
 # Required: mem0 API key for memory management
 MEM0_API_KEY=your_mem0_api_key_here
 
@@ -178,10 +185,59 @@ LOG_LEVEL=INFO
 DEEPSEEK_MODEL=deepseek-reasoner  # DeepSeek-R1-0528 reasoning model
 ```
 
+### MCP Server Configuration
+
+The application now uses an external JSON configuration file for MCP servers:
+
+**File**: `config/mcp_servers.json`
+
+```json
+{
+  "version": "1.0",
+  "servers": {
+    "time": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-time"],
+      "enabled": true,
+      "description": "Time and date operations",
+      "category": "utility"
+    },
+    "fetch": {
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "enabled": true,
+      "description": "HTTP fetch operations",
+      "category": "network"
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "enabled": true,
+      "description": "Memory storage operations",
+      "category": "storage"
+    }
+  },
+  "global_settings": {
+    "default_timeout": 30,
+    "default_retry_attempts": 3,
+    "log_level": "INFO"
+  }
+}
+```
+
+**Key Features**:
+- 🔄 **Hot Reload**: Configuration changes are detected and applied automatically
+- ✅ **Validation**: Comprehensive validation with helpful error messages
+- 🎛️ **Dynamic Control**: Enable/disable servers without code changes
+- 📁 **External Config**: Configuration separated from code for better maintainability
+- 🔒 **Fallback**: Automatic fallback to default configuration if file is missing
+
+For detailed information about the MCP configuration system, see [docs/MCP_CONFIGURATION_SYSTEM.md](docs/MCP_CONFIGURATION_SYSTEM.md).
+
 ### API Keys Setup
 
 1. **DeepSeek API**: Get your API key from [DeepSeek Platform](https://platform.deepseek.com/api_keys) for DeepSeek-R1-0528 model access
-2. **Official MCP Servers**: Automatically configured via Qwen-Agent (no additional setup needed)
+2. **MCP Servers**: Configured via external JSON file (`config/mcp_servers.json`) - no API keys needed for official servers
 3. **mem0 API**: Get your API key from [mem0.ai](https://mem0.ai/) for memory management
 
 ## 🧪 Development
@@ -218,10 +274,15 @@ This is an MVP implementation with the following development roadmap:
 3. ✅ **MCP SSE Client Implementation** (Completed)
 4. ✅ **Memory Management (mem0)** (Completed)
 5. ✅ **Qwen-Agent Core Integration** (Completed)
-6. 🔄 **CLI Interface Enhancement** (Current: Task 7)
-7. 🔄 **Error Handling & Logging** (Task 8)
-8. 🔄 **Documentation & Examples** (Task 9)
-9. 🔄 **Complete Testing Suite** (Task 10)
+6. ✅ **External MCP Configuration System** (Completed - Task 13)
+   - Dynamic JSON-based configuration
+   - Hot reload functionality
+   - Comprehensive validation system
+   - Graceful fallback mechanisms
+7. 🔄 **CLI Interface Enhancement** (Current: Task 7)
+8. 🔄 **Error Handling & Logging** (Task 8)
+9. 🔄 **Documentation & Examples** (Task 9)
+10. 🔄 **Complete Testing Suite** (Task 10)
 
 ## 🤝 Contributing
 

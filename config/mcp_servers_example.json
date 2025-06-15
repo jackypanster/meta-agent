@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "description": "MCP服务器配置示例文件 - 展示如何添加更多服务器",
+  "servers": {
+    "time": {
+      "command": "uvx",
+      "args": ["mcp-server-time", "--local-timezone=Asia/Shanghai"],
+      "enabled": true,
+      "description": "时间和日期操作服务，支持亚洲/上海时区",
+      "category": "utility",
+      "timeout": 30
+    },
+    "fetch": {
+      "command": "uvx", 
+      "args": ["mcp-server-fetch"],
+      "enabled": true,
+      "description": "HTTP网页抓取服务，用于获取网页内容和实时信息",
+      "category": "network",
+      "timeout": 60
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "enabled": true,
+      "description": "外部内存存储服务，提供持久化数据存储功能",
+      "category": "storage",
+      "timeout": 30
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+      "enabled": false,
+      "description": "文件系统操作服务，用于文件读写操作",
+      "category": "storage",
+      "timeout": 45
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "./data.db"],
+      "enabled": false,
+      "description": "SQLite数据库操作服务",
+      "category": "database",
+      "timeout": 60
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "enabled": false,
+      "description": "GitHub API集成服务",
+      "category": "api",
+      "timeout": 90,
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"
+      }
+    },
+    "brave_search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "enabled": false,
+      "description": "Brave搜索引擎API服务",
+      "category": "search",
+      "timeout": 60,
+      "env": {
+        "BRAVE_API_KEY": "your-api-key-here"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "enabled": false,
+      "description": "PostgreSQL数据库操作服务",
+      "category": "database",
+      "timeout": 60,
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://user:password@localhost:5432/dbname"
+      }
+    }
+  },
+  "global_settings": {
+    "default_timeout": 30,
+    "retry_attempts": 3,
+    "retry_delay": 1.0,
+    "max_concurrent_servers": 10,
+    "log_level": "INFO",
+    "enable_hot_reload": true
+  },
+  "categories": {
+    "utility": {
+      "description": "实用工具类服务",
+      "color": "blue"
+    },
+    "network": {
+      "description": "网络访问类服务", 
+      "color": "green"
+    },
+    "storage": {
+      "description": "数据存储类服务",
+      "color": "yellow"
+    },
+    "database": {
+      "description": "数据库操作类服务",
+      "color": "purple"
+    },
+    "api": {
+      "description": "第三方API集成服务",
+      "color": "orange"
+    },
+    "search": {
+      "description": "搜索引擎类服务",
+      "color": "red"
+    }
+  },
+  "metadata": {
+    "created_at": "2025-06-15T15:00:00Z",
+    "last_modified": "2025-06-15T15:00:00Z",
+    "schema_version": "1.0",
+    "author": "Qwen-Agent MVP",
+    "notes": [
+      "这是一个示例配置文件，展示了如何配置各种MCP服务器",
+      "默认只启用了time、fetch和memory服务器",
+      "其他服务器需要额外的API密钥或环境配置",
+      "可以通过复制此文件到mcp_servers.json并修改enabled字段来启用服务器",
+      "某些服务器需要在env字段中配置API密钥或连接字符串"
+    ]
+  }
+} 

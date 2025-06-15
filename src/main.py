@@ -11,7 +11,8 @@ Qwen-Agent MVP - 简洁直观实现
 """
 
 import time
-from typing import Dict
+import requests
+from typing import Dict, List, Any
 
 # Qwen-Agent imports
 from qwen_agent.agents import Assistant
@@ -22,6 +23,7 @@ from src.tools.qwen_tools.memory_tools import get_memory_store
 
 # 导入配置管理
 from src.config.settings import get_config, ConfigError
+from src.config.mcp_config import get_mcp_config_loader
 
 # 导入UI帮助函数
 from src.ui import show_welcome, show_help, show_memory, clear_screen
@@ -35,7 +37,90 @@ class ModelConfigError(Exception):
     """模型配置错误"""
 
 
+class MCPConfigError(Exception):
+    """MCP配置错误"""
 
+
+def setup_mcp_servers() -> Dict[str, Any]:
+    """设置MCP服务器配置
+    
+    从配置文件动态加载启用的MCP服务器，如果配置文件不存在则使用默认配置
+    
+    Returns:
+        MCP服务器配置字典，符合Qwen-Agent格式
+        
+    Raises:
+        MCPConfigError: MCP配置加载失败（仅在严重错误时）
+    """
+    # 默认配置作为后备
+    default_config = {
+        'time': {
+            'command': 'uvx',
+            'args': ['mcp-server-time', '--local-timezone=Asia/Shanghai']
+        },
+        'fetch': {
+            'command': 'uvx',
+            'args': ['mcp-server-fetch']
+        },
+        'memory': {
+            'command': 'npx',
+            'args': ['-y', '@modelcontextprotocol/server-memory']
+        }
+    }
+    
+    try:
+        # 获取MCP配置加载器
+        config_loader = get_mcp_config_loader()
+        
+        # 获取启用的服务器
+        enabled_servers = config_loader.get_enabled_servers()
+        
+        if not enabled_servers:
+            print("⚠️  未找到启用的MCP服务器，将使用默认配置")
+            return default_config
+        
+        # 构建Qwen-Agent格式的MCP配置
+        mcp_servers = {}
+        
+        for server_name in enabled_servers:
+            server_config = config_loader.get_server_config(server_name)
+            if server_config:
+                # 转换为Qwen-Agent期望的格式
+                qwen_config = {
+                    'command': server_config['command'],
+                    'args': server_config['args']
+                }
+                
+                # 添加环境变量（如果有）
+                if 'env' in server_config:
+                    qwen_config['env'] = server_config['env']
+                
+                mcp_servers[server_name] = qwen_config
+                
+                # 显示加载的服务器信息
+                category = server_config.get('category', '未分类')
+                timeout = server_config.get('timeout', '默认')
+                print(f"✓ 加载MCP服务器: {server_name} (分类: {category}, 超时: {timeout}s)")
+        
+        print(f"📡 成功加载 {len(mcp_servers)} 个MCP服务器")
+        return mcp_servers
+        
+    except MCPConfigError as e:
+        # 配置文件相关错误，使用默认配置
+        if "配置文件不存在" in str(e) or "FileNotFoundError" in str(e):
+            print("⚠️  MCP配置文件不存在，使用默认配置")
+            print(f"📡 加载默认MCP服务器: {list(default_config.keys())}")
+            return default_config
+        else:
+            # 其他配置错误，也使用默认配置但记录警告
+            print(f"⚠️  MCP配置加载失败: {e}")
+            print("📡 使用默认配置继续运行")
+            return default_config
+    except Exception as e:
+        # 严重错误，使用默认配置
+        print(f"⚠️  MCP配置系统错误: {e}")
+        print("📡 使用默认配置继续运行")
+        return default_config
 
 
 def create_llm_config() -> Dict:
@@ -84,6 +169,55 @@ def create_llm_config() -> Dict:
     }
 
 
+def create_tools_list() -> List[Any]:
+    """创建工具列表
+    
+    动态构建包含MCP服务器的工具列表，如果MCP配置失败则使用基本工具
+    
+    Returns:
+        工具列表，包含自定义工具和MCP服务器配置（如果可用）
+    """
+    try:
+        # 设置MCP服务器
+        mcp_servers = setup_mcp_servers()
+        
+        # 构建工具列表
+        tools = [
+            'custom_save_info', 
+            'custom_recall_info', 
+            'custom_math_calc',
+            {
+                'mcpServers': mcp_servers  # 使用动态加载的MCP配置
+            },
+            'code_interpreter',  # 内置代码解释器工具
+        ]
+        
+        return tools
+        
+    except MCPConfigError as e:
+        # MCP配置失败，使用基本工具列表
+        print(f"⚠️  MCP配置失败: {e}")
+        print("📦 使用基本工具列表继续运行")
+        
+        return [
+            'custom_save_info', 
+            'custom_recall_info', 
+            'custom_math_calc',
+            'code_interpreter',  # 内置代码解释器工具
+        ]
+    except Exception as e:
+        # 其他错误，也使用基本工具列表
+        print(f"⚠️  工具列表创建失败: {e}")
+        print("📦 使用基本工具列表继续运行")
+        
+        return [
+            'custom_save_info', 
+            'custom_recall_info', 
+            'custom_math_calc',
+            'code_interpreter',  # 内置代码解释器工具
+        ]
+
+
 def main():
     """主函数 - 专注于程序流程控制"""
     try:
@@ -102,6 +236,11 @@ def main():
             print(f"\n❌ 初始化失败: {str(e)}")
             print("请检查网络连接和环境配置")
             return
+        
+        # 3. 设置MCP服务器和工具
+        print("\n📡 正在加载MCP服务器配置...")
+        
+        tools = create_tools_list()
         
         # 系统提示 - 针对推理模型优化，简化指令
         system_message = '''你是一个友好的AI助手，具有强大的推理能力。
@@ -134,29 +273,6 @@ MCP服务说明：
 
         # 创建Agent (with error handling) - 参考官方Qwen3示例
         try:
-            # 使用官方Qwen-Agent MCP集成方式，参考官方示例
-            tools = [
-                'custom_save_info', 
-                'custom_recall_info', 
-                'custom_math_calc',
-                {
-                    'mcpServers': {  # 官方MCP配置格式
-                        'time': {
-                            'command': 'uvx',
-                            'args': ['mcp-server-time', '--local-timezone=Asia/Shanghai']
-                        },
-                        'fetch': {
-                            'command': 'uvx',
-                            'args': ['mcp-server-fetch']
-                        },
-                        'memory': {
-                            'command': 'npx',
-                            'args': ['-y', '@modelcontextprotocol/server-memory']
-                        }
-                    }
-                },
-                'code_interpreter',  # 内置代码解释器工具
-            ]
             agent = Assistant(
                 llm=llm_cfg,
                 system_message=system_message,
@@ -170,7 +286,7 @@ MCP服务说明：
             print("可能的原因: API配置错误或模型服务不可用")
             return
         
-        # 3. 对话循环 (with enhanced error handling)
+        # 4. 对话循环 (with enhanced error handling)
         messages = []
         memory_store = get_memory_store()
         config = get_config()
@@ -276,6 +392,7 @@ MCP服务说明：
         print("2. API密钥是否正确设置")
         print("3. 依赖是否正确安装")
         print("4. DeepSeek API服务是否可用")
+        print("5. MCP配置文件是否正确")
 
 
 if __name__ == "__main__":

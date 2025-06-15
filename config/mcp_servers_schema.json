@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Servers Configuration Schema",
+  "description": "JSON Schema for MCP (Model Context Protocol) servers configuration file",
+  "type": "object",
+  "required": ["version", "servers", "global_settings"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "配置文件版本号"
+    },
+    "description": {
+      "type": "string",
+      "description": "配置文件描述"
+    },
+    "servers": {
+      "type": "object",
+      "description": "MCP服务器配置",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "object",
+          "required": ["command", "args"],
+          "properties": {
+            "command": {
+              "type": "string",
+              "minLength": 1,
+              "description": "启动服务器的命令"
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "命令参数列表"
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "是否启用此服务器"
+            },
+            "description": {
+              "type": "string",
+              "description": "服务器功能描述"
+            },
+            "category": {
+              "type": "string",
+              "description": "服务器分类"
+            },
+            "timeout": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "服务器超时时间（秒）"
+            },
+            "env": {
+              "type": "object",
+              "description": "环境变量设置",
+              "patternProperties": {
+                "^[A-Z_][A-Z0-9_]*$": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "global_settings": {
+      "type": "object",
+      "required": ["default_timeout", "retry_attempts"],
+      "properties": {
+        "default_timeout": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 300,
+          "description": "默认超时时间（秒）"
+        },
+        "retry_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "重试次数"
+        },
+        "retry_delay": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 60,
+          "description": "重试延迟（秒）"
+        },
+        "max_concurrent_servers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "最大并发服务器数量"
+        },
+        "log_level": {
+          "type": "string",
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+          "description": "日志级别"
+        },
+        "enable_hot_reload": {
+          "type": "boolean",
+          "description": "是否启用热重载"
+        }
+      },
+      "additionalProperties": false
+    },
+    "categories": {
+      "type": "object",
+      "description": "服务器分类定义",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "分类描述"
+            },
+            "color": {
+              "type": "string",
+              "description": "分类颜色"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "元数据信息",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "创建时间"
+        },
+        "last_modified": {
+          "type": "string", 
+          "format": "date-time",
+          "description": "最后修改时间"
+        },
+        "schema_version": {
+          "type": "string",
+          "description": "Schema版本"
+        },
+        "author": {
+          "type": "string",
+          "description": "作者"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "备注信息"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+} 
