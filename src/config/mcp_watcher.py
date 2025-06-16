@@ -54,23 +54,19 @@ class MCPConfigChangeHandler(FileSystemEventHandler):
         threading.Timer(0.5, self._handle_config_change).start()
     
     def _handle_config_change(self):
-        """处理配置文件变化"""
-        try:
-            # 重置配置加载器以强制重新加载
-            reset_mcp_config_loader()
-            
-            # 加载新配置
-            config_loader = get_mcp_config_loader()
-            new_config = config_loader.load_config()
-            
-            logger.info("配置文件重新加载成功")
-            
-            # 调用回调函数通知配置变化
-            if self.callback:
-                self.callback(new_config)
-                
-        except Exception as e:
-            logger.error(f"配置文件重新加载失败: {e}")
+        """处理配置文件变化 - 失败时立即抛出异常"""
+        # 重置配置加载器以强制重新加载
+        reset_mcp_config_loader()
+        
+        # 加载新配置 - 任何错误都会立即抛出
+        config_loader = get_mcp_config_loader()
+        new_config = config_loader.load_config()
+        
+        logger.info("配置文件重新加载成功")
+        
+        # 调用回调函数通知配置变化
+        if self.callback:
+            self.callback(new_config)
 
 
 class MCPConfigWatcher:
@@ -108,105 +104,80 @@ class MCPConfigWatcher:
                 logger.debug(f"移除配置变化回调，当前回调数量: {len(self.callbacks)}")
     
     def _notify_callbacks(self, config: Dict[str, Any]):
-        """通知所有回调函数配置已变化
+        """通知所有回调函数配置已变化 - 回调失败时立即抛出异常
         
         Args:
             config: 新的配置数据
         """
         with self._lock:
             for callback in self.callbacks:
-                try:
-                    callback(config)
-                except Exception as e:
-                    logger.error(f"配置变化回调执行失败: {e}")
+                callback(config)  # 任何回调失败都会立即抛出异常
     
-    def start_watching(self) -> bool:
-        """开始监控配置文件
-        
-        Returns:
-            是否成功开始监控
-        """
+    def start_watching(self) -> None:
+        """开始监控配置文件 - 失败时立即抛出异常"""
         with self._lock:
             if self.is_watching:
-                logger.warning("配置监控已经在运行")
-                return True
+                raise RuntimeError("❌ 配置监控已经在运行")
             
-            try:
-                # 检查配置文件是否存在
-                if not self.config_path.exists():
-                    logger.warning(f"配置文件不存在: {self.config_path}")
-                    return False
-                
-                # 创建事件处理器
-                self.event_handler = MCPConfigChangeHandler(
-                    str(self.config_path),
-                    self._notify_callbacks
-                )
-                
-                # 创建文件系统观察者
-                self.observer = Observer()
-                self.observer.schedule(
-                    self.event_handler,
-                    str(self.config_path.parent),
-                    recursive=False
-                )
-                
-                # 启动监控
-                self.observer.start()
-                self.is_watching = True
-                
-                logger.info(f"开始监控MCP配置文件: {self.config_path}")
-                return True
-                
-            except Exception as e:
-                logger.error(f"启动配置文件监控失败: {e}")
-                self.is_watching = False
-                return False
+            # 检查配置文件是否存在
+            if not self.config_path.exists():
+                raise FileNotFoundError(f"❌ 配置文件不存在: {self.config_path}")
+            
+            # 创建事件处理器
+            self.event_handler = MCPConfigChangeHandler(
+                str(self.config_path),
+                self._notify_callbacks
+            )
+            
+            # 创建文件系统观察者
+            self.observer = Observer()
+            self.observer.schedule(
+                self.event_handler,
+                str(self.config_path.parent),
+                recursive=False
+            )
+            
+            # 启动监控
+            self.observer.start()
+            self.is_watching = True
+            
+            logger.info(f"开始监控MCP配置文件: {self.config_path}")
     
     def stop_watching(self):
-        """停止监控配置文件"""
+        """停止监控配置文件 - 失败时立即抛出异常"""
         with self._lock:
             if not self.is_watching:
                 return
             
-            try:
-                if self.observer:
-                    self.observer.stop()
-                    self.observer.join(timeout=5.0)
-                    self.observer = None
-                
-                self.event_handler = None
-                self.is_watching = False
-                
-                logger.info("已停止MCP配置文件监控")
-                
-            except Exception as e:
-                logger.error(f"停止配置文件监控失败: {e}")
+            if self.observer:
+                self.observer.stop()
+                self.observer.join(timeout=5.0)
+                self.observer = None
+            
+            self.event_handler = None
+            self.is_watching = False
+            
+            logger.info("已停止MCP配置文件监控")
     
-    def reload_config(self) -> Optional[Dict[str, Any]]:
-        """手动重新加载配置
+    def reload_config(self) -> Dict[str, Any]:
+        """手动重新加载配置 - 失败时立即抛出异常
         
         Returns:
-            新的配置数据，如果加载失败则返回None
+            新的配置数据
         """
-        try:
-            # 重置配置加载器
-            reset_mcp_config_loader()
-            
-            # 加载新配置
-            config_loader = get_mcp_config_loader()
-            new_config = config_loader.load_config()
-            
-            logger.info("手动重新加载配置成功")
-            
-            # 通知回调函数
-            self._notify_callbacks(new_config)
-            
-            return new_config
-            
-        except Exception as e:
-            logger.error(f"手动重新加载配置失败: {e}")
-            return None
+        # 重置配置加载器
+        reset_mcp_config_loader()
+        
+        # 加载新配置 - 任何错误都会立即抛出
+        config_loader = get_mcp_config_loader()
+        new_config = config_loader.load_config()
+        
+        logger.info("手动重新加载配置成功")
+        
+        # 通知回调函数
+        self._notify_callbacks(new_config)
+        
+        return new_config
     
     def get_config_info(self) -> Dict[str, Any]:
         """获取配置监控器信息

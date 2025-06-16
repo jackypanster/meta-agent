@@ -50,32 +50,23 @@ class MCPConfigLoader:
             raise MCPConfigError(f"MCP配置文件不存在: {self.config_path}")
     
     def _load_schema(self) -> Dict[str, Any]:
-        """加载JSON Schema"""
+        """加载JSON Schema - 失败时立即抛出异常"""
         if self._schema_cache is None and self.schema_path.exists():
-            try:
-                with open(self.schema_path, 'r', encoding='utf-8') as f:
-                    self._schema_cache = json.load(f)
-                logger.debug(f"已加载JSON Schema: {self.schema_path}")
-            except Exception as e:
-                logger.warning(f"无法加载JSON Schema: {e}")
-                self._schema_cache = {}
-        return self._schema_cache or {}
+            with open(self.schema_path, 'r', encoding='utf-8') as f:
+                self._schema_cache = json.load(f)
+            logger.debug(f"已加载JSON Schema: {self.schema_path}")
+        elif self._schema_cache is None:
+            # Schema文件不存在应该立即失败
+            raise MCPConfigError(f"❌ JSON Schema文件不存在: {self.schema_path}")
+        return self._schema_cache
     
     def _validate_config(self, config: Dict[str, Any]) -> None:
-        """验证配置文件格式"""
-        schema = self._load_schema()
-        if not schema:
-            logger.warning("未找到JSON Schema，跳过验证")
-            return
+        """验证配置文件格式 - 验证失败时立即抛出异常"""
+        schema = self._load_schema()  # 这会在schema不存在时抛出异常
         
-        try:
-            jsonschema.validate(config, schema)
-            logger.debug("配置文件验证通过")
-        except ValidationError as e:
-            error_msg = f"配置文件格式错误: {e.message}"
-            if e.absolute_path:
-                error_msg += f" (路径: {'.'.join(str(p) for p in e.absolute_path)})"
-            raise MCPConfigError(error_msg)
+        # 使用jsonschema验证，任何验证错误都会立即抛出
+        jsonschema.validate(config, schema)
+        logger.debug("配置文件验证通过")
     
     def load_config(self, force_reload: bool = False) -> Dict[str, Any]:
         """加载MCP配置文件
@@ -89,39 +80,31 @@ class MCPConfigLoader:
         Raises:
             MCPConfigError: 配置文件加载或验证失败
         """
-        try:
-            current_mtime = self.config_path.stat().st_mtime
+        current_mtime = self.config_path.stat().st_mtime
+        
+        # 检查是否需要重新加载
+        if (self._config_cache is None or 
+            force_reload or 
+            current_mtime != self._last_modified):
             
-            # 检查是否需要重新加载
-            if (self._config_cache is None or 
-                force_reload or 
-                current_mtime != self._last_modified):
-                
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                
-                # 验证配置格式
-                self._validate_config(config)
-                
-                # 更新缓存
-                self._config_cache = config
-                self._last_modified = current_mtime
-                
-                logger.info(f"已加载MCP配置: {self.config_path}")
-                logger.debug(f"配置版本: {config.get('version', 'unknown')}")
-                
-                # 更新元数据中的最后修改时间
-                if 'metadata' in config:
-                    config['metadata']['last_modified'] = datetime.now().isoformat() + 'Z'
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
             
-            return self._config_cache
+            # 验证配置格式 - 任何验证错误都会立即抛出
+            self._validate_config(config)
             
-        except json.JSONDecodeError as e:
-            raise MCPConfigError(f"配置文件JSON格式错误: {e}")
-        except FileNotFoundError:
-            raise MCPConfigError(f"配置文件不存在: {self.config_path}")
-        except Exception as e:
-            raise MCPConfigError(f"加载配置文件失败: {e}")
+            # 更新缓存
+            self._config_cache = config
+            self._last_modified = current_mtime
+            
+            logger.info(f"已加载MCP配置: {self.config_path}")
+            logger.debug(f"配置版本: {config.get('version', 'unknown')}")
+            
+            # 更新元数据中的最后修改时间
+            if 'metadata' in config:
+                config['metadata']['last_modified'] = datetime.now().isoformat() + 'Z'
+        
+        return self._config_cache
     
     def get_enabled_servers(self) -> Dict[str, Dict[str, Any]]:
         """获取所有启用的MCP服务器配置
@@ -135,7 +118,7 @@ class MCPConfigLoader:
         enabled_servers = {
             name: server_config 
             for name, server_config in servers.items()
-            if server_config.get('enabled', True)  # 默认启用
+            if server_config.get('enabled') is not False  # 必须明确设置为False才禁用
         }
         
         logger.debug(f"找到 {len(enabled_servers)} 个启用的MCP服务器")
@@ -214,21 +197,30 @@ class MCPConfigLoader:
         return server_name in self.get_enabled_servers()
     
     def get_server_timeout(self, server_name: str) -> int:
-        """获取服务器超时设置
+        """获取服务器超时设置 - 如果未配置则抛出异常
         
         Args:
             server_name: 服务器名称
             
         Returns:
-            超时时间（秒），如果未配置则返回全局默认值
+            超时时间（秒）
+            
+        Raises:
+            MCPConfigError: 如果服务器不存在或未配置超时
         """
         server_config = self.get_server_config(server_name)
-        if server_config and 'timeout' in server_config:
+        if not server_config:
+            raise MCPConfigError(f"❌ 服务器 '{server_name}' 不存在或未启用")
+        
+        if 'timeout' in server_config:
             return server_config['timeout']
         
-        # 返回全局默认超时
+        # 检查全局设置
         global_settings = self.get_global_settings()
-        return global_settings.get('default_timeout', 30)
+        if 'default_timeout' not in global_settings:
+            raise MCPConfigError(f"❌ 服务器 '{server_name}' 未配置超时，且全局设置中也未配置default_timeout")
+        
+        return global_settings['default_timeout']
     
     def get_config_info(self) -> Dict[str, Any]:
         """获取配置文件信息
@@ -252,28 +244,17 @@ class MCPConfigLoader:
             'metadata': config.get('metadata', {})
         }
     
-    def reload_config(self) -> bool:
-        """强制重新加载配置文件
+    def reload_config(self) -> None:
+        """强制重新加载配置文件 - 失败时立即抛出异常"""
+        old_config = self._config_cache.copy() if self._config_cache else {}
+        self.load_config(force_reload=True)
         
-        Returns:
-            是否成功重新加载
-        """
-        try:
-            old_config = self._config_cache.copy() if self._config_cache else {}
-            self.load_config(force_reload=True)
-            
-            # 检查配置是否有变化
-            new_config = self._config_cache
-            if old_config != new_config:
-                logger.info("配置文件已更新并重新加载")
-                return True
-            else:
-                logger.debug("配置文件无变化")
-                return False
-                
-        except Exception as e:
-            logger.error(f"重新加载配置失败: {e}")
-            return False
+        # 检查配置是否有变化
+        new_config = self._config_cache
+        if old_config != new_config:
+            logger.info("配置文件已更新并重新加载")
+        else:
+            logger.debug("配置文件无变化")
 
 
 # 全局配置加载器实例

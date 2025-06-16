@@ -40,49 +40,50 @@ class Config:
         if not env_path.exists():
             raise ConfigError(f"未找到配置文件: {env_path}")
         
-        # 解析.env文件
-        try:
-            with open(env_path, 'r', encoding='utf-8') as f:
-                for line_num, line in enumerate(f, 1):
-                    line = line.strip()
+        # 解析.env文件 - 任何错误都应该立即失败
+        with open(env_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                
+                # 跳过空行和注释
+                if not line or line.startswith('#'):
+                    continue
+                
+                # 解析键值对
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
                     
-                    # 跳过空行和注释
-                    if not line or line.startswith('#'):
-                        continue
+                    # 移除引号
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    elif value.startswith("'") and value.endswith("'"):
+                        value = value[1:-1]
                     
-                    # 解析键值对
-                    if '=' in line:
-                        key, value = line.split('=', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        
-                        # 移除引号
-                        if value.startswith('"') and value.endswith('"'):
-                            value = value[1:-1]
-                        elif value.startswith("'") and value.endswith("'"):
-                            value = value[1:-1]
-                        
-                        self._config[key] = value
-                    else:
-                        print(f"警告: .env文件第{line_num}行格式错误: {line}")
-                        
-        except Exception as e:
-            raise ConfigError(f"读取配置文件失败: {str(e)}")
+                    self._config[key] = value
+                else:
+                    # 格式错误应该导致立即失败，而不是警告
+                    raise ConfigError(f"❌ .env文件第{line_num}行格式错误: {line}")
         
         print(f"✓ 已从 {env_path} 加载配置")
     
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, key: str) -> str:
         """
-        获取配置值
+        获取配置值 - 如果不存在则立即失败
         
         Args:
             key: 配置键名
-            default: 默认值
             
         Returns:
-            配置值或默认值
+            配置值
+            
+        Raises:
+            ConfigError: 如果配置不存在
         """
-        return self._config.get(key, default)
+        if key not in self._config:
+            raise ConfigError(f"❌ 配置 '{key}' 不存在")
+        return self._config[key]
     
     def require(self, key: str) -> str:
         """
@@ -102,20 +103,20 @@ class Config:
             raise ConfigError(f"缺少必需的配置: {key}")
         return value
     
-    def get_bool(self, key: str, default: bool = False) -> bool:
+    def get_bool(self, key: str) -> bool:
         """
-        获取布尔类型配置值
+        获取布尔类型配置值 - 如果不存在则立即失败
         
         Args:
             key: 配置键名
-            default: 默认值
             
         Returns:
             布尔值
+            
+        Raises:
+            ConfigError: 如果配置不存在
         """
-        value = self.get(key)
-        if value is None:
-            return default
+        value = self.get(key)  # 这会在配置不存在时抛出异常
         return value.lower() in ['true', '1', 'yes', 'on']
     
     def list_all(self) -> Dict[str, str]:

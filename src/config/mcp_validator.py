@@ -71,21 +71,25 @@ class MCPConfigValidator:
         # 分类名称正则表达式
         self.category_name_pattern = re.compile(r'^[a-zA-Z][a-zA-Z0-9_-]*$')
     
-    def _load_schema(self) -> Optional[Dict[str, Any]]:
-        """加载JSON Schema"""
-        if self._schema_cache is None and self.schema_path and self.schema_path.exists():
-            try:
-                import json
-                with open(self.schema_path, 'r', encoding='utf-8') as f:
-                    self._schema_cache = json.load(f)
-                logger.debug(f"已加载验证Schema: {self.schema_path}")
-            except Exception as e:
-                logger.warning(f"无法加载验证Schema: {e}")
-                self._schema_cache = {}
+    def _load_schema(self) -> Dict[str, Any]:
+        """加载JSON Schema - 失败时立即抛出异常"""
+        if self._schema_cache is None:
+            if not self.schema_path or not self.schema_path.exists():
+                raise MCPValidationError(
+                    f"❌ JSON Schema文件不存在: {self.schema_path}",
+                    "schema",
+                    ["请确保schema文件存在且路径正确"]
+                )
+            
+            import json
+            with open(self.schema_path, 'r', encoding='utf-8') as f:
+                self._schema_cache = json.load(f)
+            logger.debug(f"已加载验证Schema: {self.schema_path}")
+        
         return self._schema_cache
     
     def validate_schema(self, config: Dict[str, Any]) -> None:
-        """JSON Schema结构验证
+        """JSON Schema结构验证 - 验证失败时立即抛出异常
         
         Args:
             config: 配置字典
@@ -93,33 +97,11 @@ class MCPConfigValidator:
         Raises:
             MCPValidationError: Schema验证失败
         """
-        schema = self._load_schema()
-        if not schema:
-            logger.warning("未找到JSON Schema，跳过结构验证")
-            return
+        schema = self._load_schema()  # 这会在schema不存在时抛出异常
         
-        try:
-            jsonschema.validate(config, schema)
-            logger.debug("JSON Schema验证通过")
-        except ValidationError as e:
-            field_path = '.'.join(str(p) for p in e.absolute_path) if e.absolute_path else "根级别"
-            
-            # 生成友好的错误信息
-            if "required" in e.message.lower():
-                missing_field = e.message.split("'")[1] if "'" in e.message else "未知字段"
-                message = f"缺少必需字段: {missing_field}"
-                suggestions = [f"请在配置文件中添加 '{missing_field}' 字段"]
-            elif "type" in e.message.lower():
-                message = f"字段类型错误: {e.message}"
-                suggestions = ["请检查字段的数据类型是否正确"]
-            elif "enum" in e.message.lower():
-                message = f"字段值不在允许范围内: {e.message}"
-                suggestions = ["请检查字段值是否为有效选项"]
-            else:
-                message = f"配置格式错误: {e.message}"
-                suggestions = ["请检查配置文件格式是否正确"]
-            
-            raise MCPValidationError(message, field_path, suggestions)
+        # 直接验证，任何错误都会立即抛出
+        jsonschema.validate(config, schema)
+        logger.debug("JSON Schema验证通过")
     
     def validate_version(self, config: Dict[str, Any]) -> None:
         """验证版本号格式
@@ -424,48 +406,34 @@ class MCPConfigValidator:
         if unused_categories:
             logger.warning(f"发现未使用的分类: {', '.join(unused_categories)}")
     
-    def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, List[str]]:
-        """完整配置验证
+    def validate_config(self, config: Dict[str, Any]) -> None:
+        """完整配置验证 - 验证失败时立即抛出异常
         
         Args:
             config: 配置字典
             
-        Returns:
-            (是否验证通过, 错误信息列表)
+        Raises:
+            MCPValidationError: 配置验证失败
         """
-        errors = []
+        # 1. JSON Schema结构验证
+        self.validate_schema(config)
         
-        try:
-            # 1. JSON Schema结构验证
-            self.validate_schema(config)
-            
-            # 2. 版本号验证
-            self.validate_version(config)
-            
-            # 3. 服务器配置验证
-            self.validate_servers(config)
-            
-            # 4. 全局设置验证
-            self.validate_global_settings(config)
-            
-            # 5. 分类定义验证
-            self.validate_categories(config)
-            
-            # 6. 配置一致性验证
-            self.validate_consistency(config)
-            
-            logger.info("MCP配置验证通过")
-            return True, []
-            
-        except MCPValidationError as e:
-            errors.append(str(e))
-            logger.error(f"MCP配置验证失败: {e}")
-            return False, errors
-        except Exception as e:
-            error_msg = f"配置验证过程中发生未知错误: {e}"
-            errors.append(error_msg)
-            logger.error(error_msg)
-            return False, errors
+        # 2. 版本号验证
+        self.validate_version(config)
+        
+        # 3. 服务器配置验证
+        self.validate_servers(config)
+        
+        # 4. 全局设置验证
+        self.validate_global_settings(config)
+        
+        # 5. 分类定义验证
+        self.validate_categories(config)
+        
+        # 6. 配置一致性验证
+        self.validate_consistency(config)
+        
+        logger.info("MCP配置验证通过")
     
     def get_validation_summary(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """获取配置验证摘要

@@ -39,39 +39,33 @@ class PromptManager:
         self.load_prompts()
     
     def load_prompts(self) -> None:
-        """加载所有提示词配置文件"""
-        try:
-            self.prompts_cache.clear()
-            self.config_cache.clear()
-            
-            self._load_config_file("system_prompts.json")
-            
-            templates_dir = self.config_dir / "templates"
-            if templates_dir.exists():
-                for template_file in templates_dir.glob("*.json"):
-                    self._load_config_file(f"templates/{template_file.name}")
-            
-            locale_file = self.config_dir / "locales" / self.locale / "system_prompts.json"
-            if locale_file.exists():
-                self._load_config_file(f"locales/{self.locale}/system_prompts.json")
-            
-            self.last_reload = datetime.now()
-        except Exception as e:
-            raise PromptConfigError(f"加载配置失败: {e}")
+        """加载所有提示词配置文件 - 失败时立即抛出异常"""
+        self.prompts_cache.clear()
+        self.config_cache.clear()
+        
+        self._load_config_file("system_prompts.json")
+        
+        templates_dir = self.config_dir / "templates"
+        if templates_dir.exists():
+            for template_file in templates_dir.glob("*.json"):
+                self._load_config_file(f"templates/{template_file.name}")
+        
+        locale_file = self.config_dir / "locales" / self.locale / "system_prompts.json"
+        if locale_file.exists():
+            self._load_config_file(f"locales/{self.locale}/system_prompts.json")
+        
+        self.last_reload = datetime.now()
     
     def _load_config_file(self, relative_path: str) -> None:
-        """加载单个配置文件"""
+        """加载单个配置文件 - 失败时立即抛出异常"""
         file_path = self.config_dir / relative_path
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            self.config_cache[relative_path] = config
-            if 'prompts' in config:
-                self.prompts_cache.update(config['prompts'])
-        except json.JSONDecodeError as e:
-            raise PromptConfigError(f"JSON解析错误 {file_path}: {e}")
-        except Exception as e:
-            raise PromptConfigError(f"读取文件失败 {file_path}: {e}")
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        self.config_cache[relative_path] = config
+        if 'prompts' in config:
+            self.prompts_cache.update(config['prompts'])
     
     def get_prompt(self, prompt_key: str, variables: Optional[Dict[str, Any]] = None) -> str:
         """获取格式化的提示词"""
@@ -84,11 +78,8 @@ class PromptManager:
         
         content = prompt_config['content']
         if variables:
-            try:
-                template = Template(content)
-                content = template.safe_substitute(variables)
-            except Exception:
-                pass
+            template = Template(content)
+            content = template.safe_substitute(variables)
         return content
     
     def reload_prompts(self) -> None:
