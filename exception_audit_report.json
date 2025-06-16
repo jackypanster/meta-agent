@@ -1,472 +1,84 @@
 {
-  "audit_timestamp": "2025-06-16T18:24:18.903148",
+  "audit_timestamp": "2025-06-16T19:58:22.762543",
   "project_root": "/Users/zhibinpan/workspace/meta-agent",
   "summary": {
-    "total_exception_handlers": 56,
-    "total_fallback_patterns": 7,
-    "files_with_exceptions": 15,
-    "files_with_fallbacks": 5
+    "total_exception_handlers": 30,
+    "total_fallback_patterns": 4,
+    "files_with_exceptions": 7,
+    "files_with_fallbacks": 4
   },
   "exception_handlers": [
     {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 56,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "PromptManagerError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        prompt_manager = PromptManager(\"config/prompts\")\n        print(\"✓ 提示词配置加载成功\")\n        return prompt_manager\n    except PromptManagerError as e:\n        print(f\"⚠️  提示词配置加载失败: {e}\")\n        print(\"将使用后备提示词\")\n        return None\n    except Exception as e:\n        print(f\"⚠️  提示词管理器初始化错误: {e}\")\n        print(\"将使用后备提示词\")\n        return None",
-      "function_name": "initialize_prompt_manager",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 88,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        return prompt_manager.get_prompt(prompt_key, variables)\n    except Exception as e:\n        # 快速失败：配置问题应该立即暴露，而不是掩盖\n        raise RuntimeError(\n            f\"❌ 提示词配置错误 '{prompt_key}': {str(e)}\\n\"\n            f\"请检查配置文件 config/prompts/ 是否存在且格式正确\"\n        ) from e",
-      "function_name": "get_prompt",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 125,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "MCPConfigError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        # 获取MCP配置加载器\n        config_loader = get_mcp_config_loader()\n        \n        # 获取启用的服务器\n        enabled_servers = config_loader.get_enabled_servers()\n        \n        if not enabled_servers:\n            print(\"⚠️  未找到启用的MCP服务器，将使用默认配置\")\n            return default_config\n        \n        # 构建Qwen-Agent格式的MCP配置\n        mcp_servers = {}\n        \n        for server_name in enabled_servers:\n            server_config = config_loader.get_server_config(server_name)\n            if server_config:\n                # 转换为Qwen-Agent期望的格式\n                qwen_config = {\n                    'command': server_config['command'],\n                    'args': server_config['args']\n                }\n                \n                # 添加环境变量（如果有）\n                if 'env' in server_config:\n                    qwen_config['env'] = server_config['env']\n                \n                mcp_servers[server_name] = qwen_config\n                \n                # 显示加载的服务器信息\n                category = server_config.get('category', '未分类')\n                timeout = server_config.get('timeout', '默认')\n                print(f\"✓ 加载MCP服务器: {server_name} (分类: {category}, 超时: {timeout}s)\")\n        \n        print(f\"📡 成功加载 {len(mcp_servers)} 个MCP服务器\")\n        return mcp_servers\n        \n    except MCPConfigError as e:\n        # 配置文件相关错误，使用默认配置\n        if \"配置文件不存在\" in str(e) or \"FileNotFoundError\" in str(e):\n            print(\"⚠️  MCP配置文件不存在，使用默认配置\")\n            print(f\"📡 加载默认MCP服务器: {list(default_config.keys())}\")\n            return default_config\n        else:\n            # 其他配置错误，也使用默认配置但记录警告\n            print(f\"⚠️  MCP配置加载失败: {e}\")\n            print(\"📡 使用默认配置继续运行\")\n            return default_config\n    except Exception as e:\n        # 严重错误，使用默认配置\n        print(f\"⚠️  MCP配置系统错误: {e}\")\n        print(\"📡 使用默认配置继续运行\")\n        return default_config",
-      "function_name": "setup_mcp_servers",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 183,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "ConfigError"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        config = get_config()\n    except ConfigError as e:\n        raise ModelConfigError(f\"配置加载失败: {str(e)}\")",
-      "function_name": "create_llm_config",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 192,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "ConfigError"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        api_key = config.require('DEEPSEEK_API_KEY')\n    except ConfigError:\n        raise ModelConfigError(\n            \"❌ 未找到DeepSeek API密钥！\\n\"\n            \"请在.env文件中设置: DEEPSEEK_API_KEY=your-api-key\"\n        )",
-      "function_name": "create_llm_config",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 234,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "MCPConfigError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        # 设置MCP服务器\n        mcp_servers = setup_mcp_servers()\n        \n        # 构建工具列表\n        tools = [\n            'custom_save_info', \n            'custom_recall_info', \n            'custom_math_calc',\n            {\n                'mcpServers': mcp_servers  # 使用动态加载的MCP配置\n            },\n            'code_interpreter',  # 内置代码解释器工具\n        ]\n        \n        return tools\n        \n    except MCPConfigError as e:\n        # MCP配置失败，使用基本工具列表\n        print(f\"⚠️  MCP配置失败: {e}\")\n        print(\"📦 使用基本工具列表继续运行\")\n        \n        return [\n            'custom_save_info', \n            'custom_recall_info', \n            'custom_math_calc',\n            'code_interpreter',  # 内置代码解释器工具\n        ]\n    except Exception as e:\n        # 其他错误，也使用基本工具列表\n        print(f\"⚠️  工具列表创建失败: {e}\")\n        print(\"📦 使用基本工具列表继续运行\")\n        \n        return [\n            'custom_save_info', \n            'custom_recall_info', \n            'custom_math_calc',\n            'code_interpreter',  # 内置代码解释器工具\n        ]",
-      "function_name": "create_tools_list",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 277,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "KeyboardInterrupt",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        # 1. 初始化提示词管理器\n        initialize_prompt_manager()\n        \n        # 2. 显示欢迎界面\n        show_welcome()\n        \n        # 3. 创建Agent (with enhanced error handling)\n        ai_loading_msg = get_prompt(\"ai_loading\")\n        print(f\"\\n{ai_loading_msg}\")\n        \n        try:\n            llm_cfg = create_llm_config()\n        except ModelConfigError as e:\n            model_config_error = get_prompt(\"model_config_error\", {\"error_details\": str(e)})\n            print(f\"\\n{model_config_error}\")\n            return\n        except Exception as e:\n            init_error = get_prompt(\n                \"initialization_error\",\n                {\"error_details\": str(e)},\n            )\n            print(f\"\\n{init_error}\")\n            return\n        \n        # 4. 设置MCP服务器和工具\n        mcp_loading_msg = get_prompt(\"mcp_loading\")\n        print(f\"\\n{mcp_loading_msg}\")\n        \n        tools = create_tools_list()\n        \n        # 获取系统提示词 - 从配置文件加载\n        system_message = get_prompt(\"system_base\")\n\n        # 创建Agent (with error handling) - 参考官方Qwen3示例\n        try:\n            # 获取Agent配置\n            agent_name = get_prompt(\"agent_name\")\n            agent_description = get_prompt(\n                \"agent_description\")\n            \n            agent = Assistant(\n                llm=llm_cfg,\n                system_message=system_message,\n                function_list=tools,\n                name=agent_name,\n                description=agent_description\n            )\n            \n            ai_success_msg = get_prompt(\"ai_success\")\n            print(ai_success_msg)\n        except Exception as e:\n            agent_creation_error = get_prompt(\n                \"agent_creation_error\",\n                {\"error_details\": str(e)},\n            )\n            print(agent_creation_error)\n            return\n        \n        # 5. 对话循环 (with enhanced error handling)\n        messages = []\n        memory_store = get_memory_store()\n        config = get_config()\n        use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)\n        model_display = \"DeepSeek-R1推理模型\" if use_r1 else \"DeepSeek-V3稳定模型\"\n        \n        conversation_start_msg = get_prompt(\n            \"conversation_start\",\n            {\"model_display\": model_display}\n        )\n        print(f\"\\n{conversation_start_msg}\\n\")\n        \n        while True:\n            # 获取用户输入\n            try:\n                user_input = input(\"您: \").strip()\n            except (EOFError, KeyboardInterrupt):\n                goodbye_msg = get_prompt(\"goodbye_message\")\n                print(f\"\\n\\n{goodbye_msg}\")\n                break\n            \n            # 处理特殊命令\n            if user_input.lower() in ['quit', 'exit', 'q', '退出']:\n                goodbye_msg = get_prompt(\"goodbye_message\")\n                print(goodbye_msg)\n                break\n            elif user_input.lower() in ['help', 'h', '帮助']:\n                show_help()\n                continue\n            elif user_input.lower() in ['clear', 'cls', '清屏']:\n                clear_screen()\n                continue\n            elif user_input.lower() in ['memory', 'mem', '记忆']:\n                show_memory()\n                continue\n            elif not user_input:\n                continue\n            \n            # 添加用户消息到历史\n            messages.append({'role': 'user', 'content': user_input})\n            \n            # 显示AI回复\n            ai_response_prefix = get_prompt(\"ai_response_prefix\")\n            print(f\"\\n{ai_response_prefix}\", end='', flush=True)\n            \n            try:\n                # 调用Agent并流式显示\n                response_text = \"\"\n                response_messages = agent.run(messages=messages)\n                \n                for response in response_messages:\n                    response_text = typewriter_print(response, response_text)\n                \n                # 清理并添加响应到历史 - 特别处理R1模型的reasoning_content\n                clean_messages = []\n                for msg in response_messages:\n                    if isinstance(msg, dict):\n                        # 创建清理后的消息副本，移除reasoning_content\n                        clean_msg = {k: v for k, v in msg.items() if k != 'reasoning_content'}\n                        clean_messages.append(clean_msg)\n                    else:\n                        clean_messages.append(msg)\n                \n                messages.extend(clean_messages)\n                \n                # 保存对话到简单历史记录\n                memory_store['history'].append({\n                    'user': user_input,\n                    'assistant': response_text,\n                    'timestamp': time.time()\n                })\n                \n                # 保持历史记录不超过50条\n                if len(memory_store['history']) > 50:\n                    memory_store['history'] = memory_store['history'][-50:]\n                \n                print()  # 换行\n                \n            except requests.exceptions.RequestException as e:\n                network_error_msg = get_prompt(\n                    \"network_error\",\n                    {\"error_details\": str(e)},\n                )\n                print(f\"\\n{network_error_msg}\")\n            except APIConnectionError as e:\n                api_error_msg = get_prompt(\n                    \"api_error\",\n                    {\"error_details\": str(e)},\n                )\n                print(f\"\\n{api_error_msg}\")\n            except Exception as e:\n                error_msg = str(e)\n                # 特别处理DeepSeek R1模型的reasoning_content错误\n                if 'reasoning_content' in error_msg:\n                    deepseek_r1_error_msg = get_prompt(\n                        \"deepseek_r1_error\")\n                    print(f\"\\n{deepseek_r1_error_msg}\")\n                    # 清理messages中可能的reasoning_content\n                    cleaned_messages = []\n                    for msg in messages:\n                        if isinstance(msg, dict) and 'reasoning_content' in msg:\n                            clean_msg = {k: v for k, v in msg.items() if k != 'reasoning_content'}\n                            cleaned_messages.append(clean_msg)\n                        else:\n                            cleaned_messages.append(msg)\n                    messages = cleaned_messages\n                    continue\n                else:\n                    generic_error_msg = get_prompt(\n                        \"generic_error\",\n                        {\"error_message\": error_msg})\n                    print(f\"\\n{generic_error_msg}\")\n    \n    except KeyboardInterrupt:\n        interrupt_msg = get_prompt(\n            \"interrupt_message\")\n        print(f\"\\n\\n{interrupt_msg}\")\n    except Exception as e:\n        program_exit_error_msg = get_prompt(\n            \"program_exit_error\",\n            {\"error_details\": str(e)},\n        )\n        print(f\"\\n{program_exit_error_msg}\")",
-      "function_name": "main",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 288,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "ModelConfigError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            llm_cfg = create_llm_config()\n        except ModelConfigError as e:\n            model_config_error = get_prompt(\"model_config_error\", {\"error_details\": str(e)})\n            print(f\"\\n{model_config_error}\")\n            return\n        except Exception as e:\n            init_error = get_prompt(\n                \"initialization_error\",\n                {\"error_details\": str(e)},\n            )\n            print(f\"\\n{init_error}\")\n            return",
-      "function_name": "main",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 312,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            # 获取Agent配置\n            agent_name = get_prompt(\"agent_name\")\n            agent_description = get_prompt(\n                \"agent_description\")\n            \n            agent = Assistant(\n                llm=llm_cfg,\n                system_message=system_message,\n                function_list=tools,\n                name=agent_name,\n                description=agent_description\n            )\n            \n            ai_success_msg = get_prompt(\"ai_success\")\n            print(ai_success_msg)\n        except Exception as e:\n            agent_creation_error = get_prompt(\n                \"agent_creation_error\",\n                {\"error_details\": str(e)},\n            )\n            print(agent_creation_error)\n            return",
-      "function_name": "main",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 351,
+      "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_fail_fast_validation.py",
+      "line_number": 47,
       "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "(EOFError, KeyboardInterrupt)"
-      ],
+      "handler_type": "try-finally",
+      "exception_types": [],
       "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                user_input = input(\"您: \").strip()\n            except (EOFError, KeyboardInterrupt):\n                goodbye_msg = get_prompt(\"goodbye_message\")\n                print(f\"\\n\\n{goodbye_msg}\")\n                break",
-      "function_name": "main",
-      "class_name": null
+      "has_finally": true,
+      "code_snippet": "try:\n                with pytest.raises(ConfigError) as exc_info:\n                    Config(f.name)\n                \n                assert \"格式错误\" in str(exc_info.value)\n            finally:\n                os.unlink(f.name)",
+      "function_name": "test_malformed_env_file_fails_immediately",
+      "class_name": "TestConfigurationFailFast"
     },
     {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 382,
+      "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_fail_fast_validation.py",
+      "line_number": 61,
       "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "requests.exceptions.RequestException",
-        "APIConnectionError",
-        "Exception"
-      ],
+      "handler_type": "try-finally",
+      "exception_types": [],
       "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                # 调用Agent并流式显示\n                response_text = \"\"\n                response_messages = agent.run(messages=messages)\n                \n                for response in response_messages:\n                    response_text = typewriter_print(response, response_text)\n                \n                # 清理并添加响应到历史 - 特别处理R1模型的reasoning_content\n                clean_messages = []\n                for msg in response_messages:\n                    if isinstance(msg, dict):\n                        # 创建清理后的消息副本，移除reasoning_content\n                        clean_msg = {k: v for k, v in msg.items() if k != 'reasoning_content'}\n                        clean_messages.append(clean_msg)\n                    else:\n                        clean_messages.append(msg)\n                \n                messages.extend(clean_messages)\n                \n                # 保存对话到简单历史记录\n                memory_store['history'].append({\n                    'user': user_input,\n                    'assistant': response_text,\n                    'timestamp': time.time()\n                })\n                \n                # 保持历史记录不超过50条\n                if len(memory_store['history']) > 50:\n                    memory_store['history'] = memory_store['history'][-50:]\n                \n                print()  # 换行\n                \n            except requests.exceptions.RequestException as e:\n                network_error_msg = get_prompt(\n                    \"network_error\",\n                    {\"error_details\": str(e)},\n                )\n                print(f\"\\n{network_error_msg}\")\n            except APIConnectionError as e:\n                api_error_msg = get_prompt(\n                    \"api_error\",\n                    {\"error_details\": str(e)},\n                )\n                print(f\"\\n{api_error_msg}\")\n            except Exception as e:\n                error_msg = str(e)\n                # 特别处理DeepSeek R1模型的reasoning_content错误\n                if 'reasoning_content' in error_msg:\n                    deepseek_r1_error_msg = get_prompt(\n                        \"deepseek_r1_error\")\n                    print(f\"\\n{deepseek_r1_error_msg}\")\n                    # 清理messages中可能的reasoning_content\n                    cleaned_messages = []\n                    for msg in messages:\n                        if isinstance(msg, dict) and 'reasoning_content' in msg:\n                            clean_msg = {k: v for k, v in msg.items() if k != 'reasoning_content'}\n                            cleaned_messages.append(clean_msg)\n                        else:\n                            cleaned_messages.append(msg)\n                    messages = cleaned_messages\n                    continue\n                else:\n                    generic_error_msg = get_prompt(\n                        \"generic_error\",\n                        {\"error_message\": error_msg})\n                    print(f\"\\n{generic_error_msg}\")",
-      "function_name": "main",
-      "class_name": null
+      "has_finally": true,
+      "code_snippet": "try:\n                config = Config(f.name)\n                \n                # 测试get方法对不存在的键立即失败\n                with pytest.raises(ConfigError) as exc_info:\n                    config.get('NONEXISTENT_KEY')\n                assert \"不存在\" in str(exc_info.value)\n                \n                # 测试require方法对不存在的键立即失败\n                with pytest.raises(ConfigError) as exc_info:\n                    config.require('MISSING_REQUIRED_KEY')\n                assert \"缺少必需的配置\" in str(exc_info.value)\n                \n            finally:\n                os.unlink(f.name)",
+      "function_name": "test_missing_required_config_fails_immediately",
+      "class_name": "TestConfigurationFailFast"
     },
     {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/ui/helpers.py",
-      "line_number": 26,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "PromptManagerError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        ui_prompt_manager = PromptManager(\"config/prompts\")\n        return ui_prompt_manager\n    except PromptManagerError as e:\n        # 静默失败，使用后备文本\n        return None\n    except Exception as e:\n        # 静默失败，使用后备文本\n        return None",
-      "function_name": "initialize_ui_prompts",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/ui/helpers.py",
-      "line_number": 48,
-      "column": 4,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n        return ui_prompt_manager.get_prompt(prompt_key, variables)\n    except Exception as e:\n        # 快速失败：UI配置问题应该立即暴露\n        raise RuntimeError(\n            f\"❌ UI提示词配置错误 '{prompt_key}': {str(e)}\\n\"\n            f\"请检查配置文件 config/prompts/templates/ui_messages.json 是否存在且格式正确\"\n        ) from e",
-      "function_name": "get_prompt",
-      "class_name": null
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/prompt_manager.py",
-      "line_number": 43,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            self.prompts_cache.clear()\n            self.config_cache.clear()\n            \n            self._load_config_file(\"system_prompts.json\")\n            \n            templates_dir = self.config_dir / \"templates\"\n            if templates_dir.exists():\n                for template_file in templates_dir.glob(\"*.json\"):\n                    self._load_config_file(f\"templates/{template_file.name}\")\n            \n            locale_file = self.config_dir / \"locales\" / self.locale / \"system_prompts.json\"\n            if locale_file.exists():\n                self._load_config_file(f\"locales/{self.locale}/system_prompts.json\")\n            \n            self.last_reload = datetime.now()\n        except Exception as e:\n            raise PromptConfigError(f\"加载配置失败: {e}\")",
-      "function_name": "load_prompts",
-      "class_name": "PromptManager"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/prompt_manager.py",
-      "line_number": 65,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "json.JSONDecodeError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            with open(file_path, 'r', encoding='utf-8') as f:\n                config = json.load(f)\n            self.config_cache[relative_path] = config\n            if 'prompts' in config:\n                self.prompts_cache.update(config['prompts'])\n        except json.JSONDecodeError as e:\n            raise PromptConfigError(f\"JSON解析错误 {file_path}: {e}\")\n        except Exception as e:\n            raise PromptConfigError(f\"读取文件失败 {file_path}: {e}\")",
-      "function_name": "_load_config_file",
-      "class_name": "PromptManager"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/prompt_manager.py",
-      "line_number": 87,
+      "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_fail_fast_validation.py",
+      "line_number": 83,
       "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
+      "handler_type": "try-finally",
+      "exception_types": [],
       "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                template = Template(content)\n                content = template.safe_substitute(variables)\n            except Exception:\n                pass",
-      "function_name": "get_prompt",
-      "class_name": "PromptManager"
+      "has_finally": true,
+      "code_snippet": "try:\n                config = Config(f.name)\n                \n                with pytest.raises(ConfigError) as exc_info:\n                    config.get_bool('NONEXISTENT_BOOL_KEY')\n                assert \"不存在\" in str(exc_info.value)\n                \n            finally:\n                os.unlink(f.name)",
+      "function_name": "test_get_bool_missing_key_fails_immediately",
+      "class_name": "TestConfigurationFailFast"
     },
     {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_validator.py",
-      "line_number": 77,
+      "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_fail_fast_validation.py",
+      "line_number": 120,
       "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
+      "handler_type": "try-finally",
+      "exception_types": [],
       "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                import json\n                with open(self.schema_path, 'r', encoding='utf-8') as f:\n                    self._schema_cache = json.load(f)\n                logger.debug(f\"已加载验证Schema: {self.schema_path}\")\n            except Exception as e:\n                logger.warning(f\"无法加载验证Schema: {e}\")\n                self._schema_cache = {}",
-      "function_name": "_load_schema",
-      "class_name": "MCPConfigValidator"
+      "has_finally": true,
+      "code_snippet": "try:\n                # 使用不存在的schema文件\n                loader = MCPConfigLoader(config_f.name, \"nonexistent_schema.json\")\n                \n                # 尝试加载配置应该在schema验证时失败\n                with pytest.raises(MCPConfigError) as exc_info:\n                    loader.load_config()\n                \n                assert \"JSON Schema文件不存在\" in str(exc_info.value)\n                \n            finally:\n                os.unlink(config_f.name)",
+      "function_name": "test_missing_schema_file_fails_immediately",
+      "class_name": "TestMCPConfigurationFailFast"
     },
     {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_validator.py",
-      "line_number": 101,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "ValidationError"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            jsonschema.validate(config, schema)\n            logger.debug(\"JSON Schema验证通过\")\n        except ValidationError as e:\n            field_path = '.'.join(str(p) for p in e.absolute_path) if e.absolute_path else \"根级别\"\n            \n            # 生成友好的错误信息\n            if \"required\" in e.message.lower():\n                missing_field = e.message.split(\"'\")[1] if \"'\" in e.message else \"未知字段\"\n                message = f\"缺少必需字段: {missing_field}\"\n                suggestions = [f\"请在配置文件中添加 '{missing_field}' 字段\"]\n            elif \"type\" in e.message.lower():\n                message = f\"字段类型错误: {e.message}\"\n                suggestions = [\"请检查字段的数据类型是否正确\"]\n            elif \"enum\" in e.message.lower():\n                message = f\"字段值不在允许范围内: {e.message}\"\n                suggestions = [\"请检查字段值是否为有效选项\"]\n            else:\n                message = f\"配置格式错误: {e.message}\"\n                suggestions = [\"请检查配置文件格式是否正确\"]\n            \n            raise MCPValidationError(message, field_path, suggestions)",
-      "function_name": "validate_schema",
-      "class_name": "MCPConfigValidator"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_validator.py",
-      "line_number": 438,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "MCPValidationError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            # 1. JSON Schema结构验证\n            self.validate_schema(config)\n            \n            # 2. 版本号验证\n            self.validate_version(config)\n            \n            # 3. 服务器配置验证\n            self.validate_servers(config)\n            \n            # 4. 全局设置验证\n            self.validate_global_settings(config)\n            \n            # 5. 分类定义验证\n            self.validate_categories(config)\n            \n            # 6. 配置一致性验证\n            self.validate_consistency(config)\n            \n            logger.info(\"MCP配置验证通过\")\n            return True, []\n            \n        except MCPValidationError as e:\n            errors.append(str(e))\n            logger.error(f\"MCP配置验证失败: {e}\")\n            return False, errors\n        except Exception as e:\n            error_msg = f\"配置验证过程中发生未知错误: {e}\"\n            errors.append(error_msg)\n            logger.error(error_msg)\n            return False, errors",
-      "function_name": "validate_config",
-      "class_name": "MCPConfigValidator"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/settings.py",
-      "line_number": 44,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            with open(env_path, 'r', encoding='utf-8') as f:\n                for line_num, line in enumerate(f, 1):\n                    line = line.strip()\n                    \n                    # 跳过空行和注释\n                    if not line or line.startswith('#'):\n                        continue\n                    \n                    # 解析键值对\n                    if '=' in line:\n                        key, value = line.split('=', 1)\n                        key = key.strip()\n                        value = value.strip()\n                        \n                        # 移除引号\n                        if value.startswith('\"') and value.endswith('\"'):\n                            value = value[1:-1]\n                        elif value.startswith(\"'\") and value.endswith(\"'\"):\n                            value = value[1:-1]\n                        \n                        self._config[key] = value\n                    else:\n                        print(f\"警告: .env文件第{line_num}行格式错误: {line}\")\n                        \n        except Exception as e:\n            raise ConfigError(f\"读取配置文件失败: {str(e)}\")",
-      "function_name": "_load_env_file",
-      "class_name": "Config"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_watcher.py",
-      "line_number": 58,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            # 重置配置加载器以强制重新加载\n            reset_mcp_config_loader()\n            \n            # 加载新配置\n            config_loader = get_mcp_config_loader()\n            new_config = config_loader.load_config()\n            \n            logger.info(\"配置文件重新加载成功\")\n            \n            # 调用回调函数通知配置变化\n            if self.callback:\n                self.callback(new_config)\n                \n        except Exception as e:\n            logger.error(f\"配置文件重新加载失败: {e}\")",
-      "function_name": "_handle_config_change",
-      "class_name": "MCPConfigChangeHandler"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_watcher.py",
-      "line_number": 118,
-      "column": 16,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                    callback(config)\n                except Exception as e:\n                    logger.error(f\"配置变化回调执行失败: {e}\")",
-      "function_name": "_notify_callbacks",
-      "class_name": "MCPConfigWatcher"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_watcher.py",
-      "line_number": 134,
+      "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_fail_fast_validation.py",
+      "line_number": 139,
       "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
+      "handler_type": "try-finally",
+      "exception_types": [],
       "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                # 检查配置文件是否存在\n                if not self.config_path.exists():\n                    logger.warning(f\"配置文件不存在: {self.config_path}\")\n                    return False\n                \n                # 创建事件处理器\n                self.event_handler = MCPConfigChangeHandler(\n                    str(self.config_path),\n                    self._notify_callbacks\n                )\n                \n                # 创建文件系统观察者\n                self.observer = Observer()\n                self.observer.schedule(\n                    self.event_handler,\n                    str(self.config_path.parent),\n                    recursive=False\n                )\n                \n                # 启动监控\n                self.observer.start()\n                self.is_watching = True\n                \n                logger.info(f\"开始监控MCP配置文件: {self.config_path}\")\n                return True\n                \n            except Exception as e:\n                logger.error(f\"启动配置文件监控失败: {e}\")\n                self.is_watching = False\n                return False",
-      "function_name": "start_watching",
-      "class_name": "MCPConfigWatcher"
+      "has_finally": true,
+      "code_snippet": "try:\n                loader = MCPConfigLoader(f.name, \"nonexistent_schema.json\")\n                \n                with pytest.raises(json.JSONDecodeError):\n                    loader.load_config()\n                    \n            finally:\n                os.unlink(f.name)",
+      "function_name": "test_invalid_json_config_fails_immediately",
+      "class_name": "TestMCPConfigurationFailFast"
     },
     {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_watcher.py",
-      "line_number": 172,
+      "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_fail_fast_validation.py",
+      "line_number": 291,
       "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
+      "handler_type": "try-finally",
+      "exception_types": [],
       "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                if self.observer:\n                    self.observer.stop()\n                    self.observer.join(timeout=5.0)\n                    self.observer = None\n                \n                self.event_handler = None\n                self.is_watching = False\n                \n                logger.info(\"已停止MCP配置文件监控\")\n                \n            except Exception as e:\n                logger.error(f\"停止配置文件监控失败: {e}\")",
-      "function_name": "stop_watching",
-      "class_name": "MCPConfigWatcher"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_watcher.py",
-      "line_number": 192,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            # 重置配置加载器\n            reset_mcp_config_loader()\n            \n            # 加载新配置\n            config_loader = get_mcp_config_loader()\n            new_config = config_loader.load_config()\n            \n            logger.info(\"手动重新加载配置成功\")\n            \n            # 通知回调函数\n            self._notify_callbacks(new_config)\n            \n            return new_config\n            \n        except Exception as e:\n            logger.error(f\"手动重新加载配置失败: {e}\")\n            return None",
-      "function_name": "reload_config",
-      "class_name": "MCPConfigWatcher"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_config.py",
-      "line_number": 55,
-      "column": 12,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n                with open(self.schema_path, 'r', encoding='utf-8') as f:\n                    self._schema_cache = json.load(f)\n                logger.debug(f\"已加载JSON Schema: {self.schema_path}\")\n            except Exception as e:\n                logger.warning(f\"无法加载JSON Schema: {e}\")\n                self._schema_cache = {}",
-      "function_name": "_load_schema",
-      "class_name": "MCPConfigLoader"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_config.py",
-      "line_number": 71,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "ValidationError"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            jsonschema.validate(config, schema)\n            logger.debug(\"配置文件验证通过\")\n        except ValidationError as e:\n            error_msg = f\"配置文件格式错误: {e.message}\"\n            if e.absolute_path:\n                error_msg += f\" (路径: {'.'.join(str(p) for p in e.absolute_path)})\"\n            raise MCPConfigError(error_msg)",
-      "function_name": "_validate_config",
-      "class_name": "MCPConfigLoader"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_config.py",
-      "line_number": 92,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "json.JSONDecodeError",
-        "FileNotFoundError",
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            current_mtime = self.config_path.stat().st_mtime\n            \n            # 检查是否需要重新加载\n            if (self._config_cache is None or \n                force_reload or \n                current_mtime != self._last_modified):\n                \n                with open(self.config_path, 'r', encoding='utf-8') as f:\n                    config = json.load(f)\n                \n                # 验证配置格式\n                self._validate_config(config)\n                \n                # 更新缓存\n                self._config_cache = config\n                self._last_modified = current_mtime\n                \n                logger.info(f\"已加载MCP配置: {self.config_path}\")\n                logger.debug(f\"配置版本: {config.get('version', 'unknown')}\")\n                \n                # 更新元数据中的最后修改时间\n                if 'metadata' in config:\n                    config['metadata']['last_modified'] = datetime.now().isoformat() + 'Z'\n            \n            return self._config_cache\n            \n        except json.JSONDecodeError as e:\n            raise MCPConfigError(f\"配置文件JSON格式错误: {e}\")\n        except FileNotFoundError:\n            raise MCPConfigError(f\"配置文件不存在: {self.config_path}\")\n        except Exception as e:\n            raise MCPConfigError(f\"加载配置文件失败: {e}\")",
-      "function_name": "load_config",
-      "class_name": "MCPConfigLoader"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_config.py",
-      "line_number": 261,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            old_config = self._config_cache.copy() if self._config_cache else {}\n            self.load_config(force_reload=True)\n            \n            # 检查配置是否有变化\n            new_config = self._config_cache\n            if old_config != new_config:\n                logger.info(\"配置文件已更新并重新加载\")\n                return True\n            else:\n                logger.debug(\"配置文件无变化\")\n                return False\n                \n        except Exception as e:\n            logger.error(f\"重新加载配置失败: {e}\")\n            return False",
-      "function_name": "reload_config",
-      "class_name": "MCPConfigLoader"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/tools/qwen_tools/memory_tools.py",
-      "line_number": 38,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            data = json.loads(params)\n            info = data['info']\n            info_type = data.get('type', 'fact')\n            \n            # 简单保存到内存\n            entry = {\n                'content': info,\n                'timestamp': time.time(),\n                'time_str': time.strftime('%Y-%m-%d %H:%M:%S')\n            }\n            \n            if info_type == 'preference':\n                MEMORY_STORE['preferences'].append(entry)\n            else:\n                MEMORY_STORE['facts'].append(entry)\n            \n            return json.dumps({\n                'status': 'saved',\n                'message': f'已保存{info_type}: {info}'\n            }, ensure_ascii=False)\n            \n        except Exception as e:\n            return json.dumps({'error': f'保存失败: {str(e)}'})",
-      "function_name": "call",
-      "class_name": "SaveInfoTool"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/tools/qwen_tools/memory_tools.py",
-      "line_number": 76,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            data = json.loads(params)\n            query = data['query'].lower()\n            \n            # 简单的关键词搜索\n            results = []\n            \n            for fact in MEMORY_STORE['facts']:\n                if query in fact['content'].lower():\n                    results.append(fact)\n                    \n            for pref in MEMORY_STORE['preferences']:\n                if query in pref['content'].lower():\n                    results.append(pref)\n            \n            if results:\n                return json.dumps({\n                    'found': True,\n                    'count': len(results),\n                    'results': results[-3:]  # 最近3条\n                }, ensure_ascii=False)\n            else:\n                return json.dumps({\n                    'found': False,\n                    'message': '没有找到相关信息'\n                })\n                \n        except Exception as e:\n            return json.dumps({'error': f'搜索失败: {str(e)}'})",
-      "function_name": "call",
-      "class_name": "RecallInfoTool"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/tools/qwen_tools/calculator_tool.py",
-      "line_number": 25,
-      "column": 8,
-      "handler_type": "try-except",
-      "exception_types": [
-        "Exception"
-      ],
-      "has_bare_except": false,
-      "has_finally": false,
-      "code_snippet": "try:\n            data = json.loads(params)\n            expression = data['expression']\n            \n            # 安全计算 - 只允许数学运算\n            allowed_names = {\n                k: v for k, v in math.__dict__.items() if not k.startswith(\"__\")\n            }\n            allowed_names.update({\"abs\": abs, \"round\": round})\n            \n            result = eval(expression, {\"__builtins__\": {}}, allowed_names)\n            \n            return json.dumps({\n                'expression': expression,\n                'result': result\n            }, ensure_ascii=False)\n            \n        except Exception as e:\n            return json.dumps({'error': f'计算错误: {str(e)}'})",
-      "function_name": "call",
-      "class_name": "CalculatorTool"
+      "has_finally": true,
+      "code_snippet": "try:\n                config = Config(f.name)\n                \n                # 确保get方法对不存在的键抛出异常，而不是返回默认值\n                with pytest.raises(ConfigError):\n                    config.get('NONEXISTENT_KEY')\n                \n                # 确保require方法对不存在的键抛出异常\n                with pytest.raises(ConfigError):\n                    config.require('NONEXISTENT_KEY')\n                \n                # 确保get_bool方法对不存在的键抛出异常\n                with pytest.raises(ConfigError):\n                    config.get_bool('NONEXISTENT_KEY')\n                    \n            finally:\n                os.unlink(f.name)",
+      "function_name": "test_no_default_values_in_config_get",
+      "class_name": "TestNoFallbackMechanisms"
     },
     {
       "file_path": "/Users/zhibinpan/workspace/meta-agent/tests/test_prompt_config_validation.py",
@@ -782,8 +394,8 @@
   "fallback_patterns": [
     {
       "file_path": "/Users/zhibinpan/workspace/meta-agent/src/main.py",
-      "line_number": 341,
-      "column": 8,
+      "line_number": 259,
+      "column": 4,
       "pattern_type": "conditional-fallback",
       "code_snippet": "model_display = \"DeepSeek-R1推理模型\" if use_r1 else \"DeepSeek-V3稳定模型\"",
       "function_name": "main",
@@ -791,7 +403,7 @@
     },
     {
       "file_path": "/Users/zhibinpan/workspace/meta-agent/src/ui/helpers.py",
-      "line_number": 62,
+      "line_number": 69,
       "column": 4,
       "pattern_type": "conditional-fallback",
       "code_snippet": "model_info = \"DeepSeek-R1 推理模型\" if use_r1 else \"DeepSeek-V3 稳定模型\"",
@@ -800,7 +412,7 @@
     },
     {
       "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/prompt_manager.py",
-      "line_number": 112,
+      "line_number": 103,
       "column": 8,
       "pattern_type": "conditional-fallback",
       "code_snippet": "provided_vars = set(variables.keys()) if variables else set()",
@@ -815,62 +427,24 @@
       "code_snippet": "self.schema_path = Path(schema_path) if schema_path else None",
       "function_name": "__init__",
       "class_name": "MCPConfigValidator"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_validator.py",
-      "line_number": 105,
-      "column": 12,
-      "pattern_type": "conditional-fallback",
-      "code_snippet": "field_path = '.'.join(str(p) for p in e.absolute_path) if e.absolute_path else \"根级别\"",
-      "function_name": "validate_schema",
-      "class_name": "MCPConfigValidator"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_validator.py",
-      "line_number": 109,
-      "column": 16,
-      "pattern_type": "conditional-fallback",
-      "code_snippet": "missing_field = e.message.split(\"'\")[1] if \"'\" in e.message else \"未知字段\"",
-      "function_name": "validate_schema",
-      "class_name": "MCPConfigValidator"
-    },
-    {
-      "file_path": "/Users/zhibinpan/workspace/meta-agent/src/config/mcp_config.py",
-      "line_number": 262,
-      "column": 12,
-      "pattern_type": "conditional-fallback",
-      "code_snippet": "old_config = self._config_cache.copy() if self._config_cache else {}",
-      "function_name": "reload_config",
-      "class_name": "MCPConfigLoader"
     }
   ],
   "statistics": {
     "handler_types": {
-      "try-except": 42,
-      "try-finally": 14
+      "try-finally": 20,
+      "try-except": 10
     },
     "exception_types": {
-      "PromptManagerError": 2,
-      "Exception": 33,
-      "MCPConfigError": 2,
-      "ConfigError": 2,
-      "KeyboardInterrupt": 1,
-      "ModelConfigError": 1,
-      "(EOFError, KeyboardInterrupt)": 1,
-      "requests.exceptions.RequestException": 1,
-      "APIConnectionError": 1,
-      "json.JSONDecodeError": 2,
-      "ValidationError": 5,
-      "MCPValidationError": 1,
-      "FileNotFoundError": 1,
+      "ValidationError": 3,
       "AssertionError": 1,
+      "Exception": 6,
       "(IndexError, TypeError)": 1,
       "SyntaxError": 1
     },
     "fallback_types": {
-      "conditional-fallback": 7
+      "conditional-fallback": 4
     },
     "bare_except_count": 0,
-    "finally_block_count": 14
+    "finally_block_count": 20
   }
 }
