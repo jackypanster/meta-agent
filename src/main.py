@@ -67,26 +67,32 @@ def initialize_prompt_manager():
         return None
 
 
-def get_prompt_with_fallback(prompt_key: str, variables: Dict[str, Any] = None, fallback: str = "") -> str:
-    """获取提示词，支持后备机制
+def get_prompt(prompt_key: str, variables: Dict[str, Any] = None) -> str:
+    """获取提示词，配置缺失时快速失败
     
     Args:
         prompt_key: 提示词键
         variables: 变量替换字典
-        fallback: 后备文本
         
     Returns:
         提示词内容
+        
+    Raises:
+        RuntimeError: 配置文件缺失或提示词不存在时立即失败
     """
     global prompt_manager
     
-    if prompt_manager:
-        try:
-            return prompt_manager.get_prompt(prompt_key, variables)
-        except Exception as e:
-            print(f"⚠️  获取提示词失败: {prompt_key}, 错误: {e}")
+    if not prompt_manager:
+        raise RuntimeError(f"❌ PromptManager未初始化！无法获取提示词: {prompt_key}")
     
-    return fallback
+    try:
+        return prompt_manager.get_prompt(prompt_key, variables)
+    except Exception as e:
+        # 快速失败：配置问题应该立即暴露，而不是掩盖
+        raise RuntimeError(
+            f"❌ 提示词配置错误 '{prompt_key}': {str(e)}\n"
+            f"请检查配置文件 config/prompts/ 是否存在且格式正确"
+        ) from e
 
 
 def setup_mcp_servers() -> Dict[str, Any]:
@@ -276,74 +282,38 @@ def main():
         show_welcome()
         
         # 3. 创建Agent (with enhanced error handling)
-        ai_loading_msg = get_prompt_with_fallback("ai_loading", fallback="🔧 正在初始化AI模型...")
+        ai_loading_msg = get_prompt("ai_loading")
         print(f"\n{ai_loading_msg}")
         
         try:
             llm_cfg = create_llm_config()
         except ModelConfigError as e:
-            model_config_error = get_prompt_with_fallback(
-                "model_config_error", 
-                {"error_details": str(e)},
-                fallback=f"❌ 模型配置失败:\n{str(e)}"
-            )
+            model_config_error = get_prompt("model_config_error", {"error_details": str(e)})
             print(f"\n{model_config_error}")
             return
         except Exception as e:
-            init_error = get_prompt_with_fallback(
+            init_error = get_prompt(
                 "initialization_error",
                 {"error_details": str(e)},
-                fallback=f"❌ 初始化失败: {str(e)}\n请检查网络连接和环境配置"
             )
             print(f"\n{init_error}")
             return
         
         # 4. 设置MCP服务器和工具
-        mcp_loading_msg = get_prompt_with_fallback("mcp_loading", fallback="📡 正在加载MCP服务器配置...")
+        mcp_loading_msg = get_prompt("mcp_loading")
         print(f"\n{mcp_loading_msg}")
         
         tools = create_tools_list()
         
         # 获取系统提示词 - 从配置文件加载
-        system_message = get_prompt_with_fallback(
-            "system_base",
-            fallback='''你是一个友好的AI助手，具有强大的推理能力。
-
-核心功能：
-1. 智能对话和问题解答
-2. 记住用户信息 - 当用户介绍个人信息时使用custom_save_info工具
-3. 回忆信息 - 当用户询问之前信息时使用custom_recall_info工具  
-4. 数学计算 - 使用custom_math_calc工具
-5. 代码执行 - 使用code_interpreter工具执行Python代码、数据分析、绘图等
-6. MCP服务集成 - 通过官方Qwen-Agent MCP支持访问外部服务
-
-MCP服务说明：
-- time服务器: 获取当前时间信息（亚洲/上海时区）
-- fetch服务器: 可以抓取网页内容，获取实时信息
-- memory服务器: 提供外部内存存储功能
-
-使用场景：
-- 当用户询问"现在几点"、"当前时间"时，系统会自动使用time服务
-- 当用户要求"抓取网页"、"获取网页内容"、"访问网站"时，系统会自动使用fetch服务
-- 当用户需要"外部存储"、"持久化数据"时，系统会自动使用memory服务
-- 当用户需要"执行代码"、"数据分析"、"绘图"、"计算"时，系统会自动使用code_interpreter
-- MCP工具会根据需要自动调用，无需手动指定
-
-行为准则：
-- 自然友好的交流
-- 根据用户需求智能选择合适的工具
-- 保持对话流畅，适度使用工具
-- 利用MCP服务和代码执行提供实时、准确的信息和分析'''
-        )
+        system_message = get_prompt("system_base")
 
         # 创建Agent (with error handling) - 参考官方Qwen3示例
         try:
             # 获取Agent配置
-            agent_name = get_prompt_with_fallback("agent_name", fallback="DeepSeek增强版AI助手")
-            agent_description = get_prompt_with_fallback(
-                "agent_description", 
-                fallback="基于DeepSeek模型的智能助手，支持记忆、计算、MCP服务和代码执行功能"
-            )
+            agent_name = get_prompt("agent_name")
+            agent_description = get_prompt(
+                "agent_description")
             
             agent = Assistant(
                 llm=llm_cfg,
@@ -353,13 +323,12 @@ MCP服务说明：
                 description=agent_description
             )
             
-            ai_success_msg = get_prompt_with_fallback("ai_success", fallback="✓ AI助手初始化成功！")
+            ai_success_msg = get_prompt("ai_success")
             print(ai_success_msg)
         except Exception as e:
-            agent_creation_error = get_prompt_with_fallback(
+            agent_creation_error = get_prompt(
                 "agent_creation_error",
                 {"error_details": str(e)},
-                fallback=f"❌ Agent创建失败: {str(e)}\n可能的原因: API配置错误或模型服务不可用"
             )
             print(agent_creation_error)
             return
@@ -371,10 +340,9 @@ MCP服务说明：
         use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
         model_display = "DeepSeek-R1推理模型" if use_r1 else "DeepSeek-V3稳定模型"
         
-        conversation_start_msg = get_prompt_with_fallback(
+        conversation_start_msg = get_prompt(
             "conversation_start",
-            {"model_display": model_display},
-            fallback=f"✨ 开始对话吧！(使用{model_display})"
+            {"model_display": model_display}
         )
         print(f"\n{conversation_start_msg}\n")
         
@@ -383,13 +351,13 @@ MCP服务说明：
             try:
                 user_input = input("您: ").strip()
             except (EOFError, KeyboardInterrupt):
-                goodbye_msg = get_prompt_with_fallback("goodbye_message", fallback="👋 再见！")
+                goodbye_msg = get_prompt("goodbye_message")
                 print(f"\n\n{goodbye_msg}")
                 break
             
             # 处理特殊命令
             if user_input.lower() in ['quit', 'exit', 'q', '退出']:
-                goodbye_msg = get_prompt_with_fallback("goodbye_message", fallback="👋 再见！")
+                goodbye_msg = get_prompt("goodbye_message")
                 print(goodbye_msg)
                 break
             elif user_input.lower() in ['help', 'h', '帮助']:
@@ -408,7 +376,7 @@ MCP服务说明：
             messages.append({'role': 'user', 'content': user_input})
             
             # 显示AI回复
-            ai_response_prefix = get_prompt_with_fallback("ai_response_prefix", fallback="🤖 助手: ")
+            ai_response_prefix = get_prompt("ai_response_prefix")
             print(f"\n{ai_response_prefix}", end='', flush=True)
             
             try:
@@ -445,27 +413,23 @@ MCP服务说明：
                 print()  # 换行
                 
             except requests.exceptions.RequestException as e:
-                network_error_msg = get_prompt_with_fallback(
+                network_error_msg = get_prompt(
                     "network_error",
                     {"error_details": str(e)},
-                    fallback=f"❌ 网络连接错误: {str(e)}\n请检查网络连接，稍后重试"
                 )
                 print(f"\n{network_error_msg}")
             except APIConnectionError as e:
-                api_error_msg = get_prompt_with_fallback(
+                api_error_msg = get_prompt(
                     "api_error",
                     {"error_details": str(e)},
-                    fallback=f"❌ API调用失败: {str(e)}\n请检查API服务状态和配置"
                 )
                 print(f"\n{api_error_msg}")
             except Exception as e:
                 error_msg = str(e)
                 # 特别处理DeepSeek R1模型的reasoning_content错误
                 if 'reasoning_content' in error_msg:
-                    deepseek_r1_error_msg = get_prompt_with_fallback(
-                        "deepseek_r1_error",
-                        fallback="❌ DeepSeek R1模型格式错误\n正在清理消息历史并重试..."
-                    )
+                    deepseek_r1_error_msg = get_prompt(
+                        "deepseek_r1_error")
                     print(f"\n{deepseek_r1_error_msg}")
                     # 清理messages中可能的reasoning_content
                     cleaned_messages = []
@@ -478,24 +442,19 @@ MCP服务说明：
                     messages = cleaned_messages
                     continue
                 else:
-                    generic_error_msg = get_prompt_with_fallback(
+                    generic_error_msg = get_prompt(
                         "generic_error",
-                        {"error_message": error_msg},
-                        fallback=f"❌ 处理出错: {error_msg}\n请检查输入并重试"
-                    )
+                        {"error_message": error_msg})
                     print(f"\n{generic_error_msg}")
     
     except KeyboardInterrupt:
-        interrupt_msg = get_prompt_with_fallback(
-            "interrupt_message",
-            fallback="👋 程序被用户中断，再见！"
-        )
+        interrupt_msg = get_prompt(
+            "interrupt_message")
         print(f"\n\n{interrupt_msg}")
     except Exception as e:
-        program_exit_error_msg = get_prompt_with_fallback(
+        program_exit_error_msg = get_prompt(
             "program_exit_error",
             {"error_details": str(e)},
-            fallback=f"❌ 程序异常退出: {str(e)}\n\n请检查:\n1. 网络连接是否正常\n2. API密钥是否正确设置\n3. 依赖是否正确安装\n4. DeepSeek API服务是否可用\n5. MCP配置文件是否正确"
         )
         print(f"\n{program_exit_error_msg}")
 

@@ -34,21 +34,25 @@ def initialize_ui_prompts():
         return None
 
 
-def get_ui_prompt(prompt_key: str, variables: dict = None, fallback: str = "") -> str:
-    """获取UI提示词，支持后备机制"""
+def get_prompt(prompt_key: str, variables: dict = None) -> str:
+    """获取UI提示词，配置缺失时快速失败"""
     global ui_prompt_manager
     
     # 懒加载提示词管理器
     if ui_prompt_manager is None:
         initialize_ui_prompts()
     
-    if ui_prompt_manager:
-        try:
-            return ui_prompt_manager.get_prompt(prompt_key, variables)
-        except Exception:
-            pass
+    if not ui_prompt_manager:
+        raise RuntimeError(f"❌ UI PromptManager未初始化！无法获取提示词: {prompt_key}")
     
-    return fallback
+    try:
+        return ui_prompt_manager.get_prompt(prompt_key, variables)
+    except Exception as e:
+        # 快速失败：UI配置问题应该立即暴露
+        raise RuntimeError(
+            f"❌ UI提示词配置错误 '{prompt_key}': {str(e)}\n"
+            f"请检查配置文件 config/prompts/templates/ui_messages.json 是否存在且格式正确"
+        ) from e
 
 
 def show_welcome():
@@ -58,25 +62,12 @@ def show_welcome():
     model_info = "DeepSeek-R1 推理模型" if use_r1 else "DeepSeek-V3 稳定模型"
     
     # 获取欢迎信息组件
-    welcome_title = get_ui_prompt("welcome_title", fallback="🤖 Qwen-Agent MVP - DeepSeek 增强版")
-    welcome_subtitle = get_ui_prompt("welcome_subtitle", {"model_info": model_info}, fallback=f"基于 {model_info} 的AI助手：")
-    features_list = get_ui_prompt("features_list", fallback="""• 💬 智能对话
-• 🧠 记忆功能 - 记住您的信息
-• 🧮 计算功能
-• 📝 信息保存和回忆
-• 🐍 代码执行 - Python代码、数据分析、绘图
-• 🔗 MCP服务集成 - 时间、网页抓取、外部内存""")
+    welcome_title = get_prompt("welcome_title")
+    welcome_subtitle = get_prompt("welcome_subtitle", {"model_info": model_info})
+    features_list = get_prompt("features_list")
     
-    r1_tip = get_ui_prompt("r1_tip", fallback="💡 提示: 设置环境变量 USE_DEEPSEEK_R1=true 可使用R1推理模型")
-    example_commands = get_ui_prompt("example_commands", fallback="""💡 试试这些命令:
-- 你好，我叫张三，喜欢编程
-- 我的名字是什么？
-- 现在几点了？
-- 计算 15 * 8 + 32
-- 用Python画一个正弦波图
-- 抓取网页 https://www.ruanyifeng.com/blog/
-- help (显示帮助)
-- quit (退出)""")
+    r1_tip = get_prompt("r1_tip")
+    example_commands = get_prompt("example_commands")
     
     print(welcome_title)
     print("=" * 50)
@@ -89,26 +80,11 @@ def show_welcome():
 
 def show_help():
     """显示帮助信息"""
-    help_commands = get_ui_prompt("help_commands", fallback="""📋 可用命令:
-• quit/exit/q - 退出程序
-• help/h - 显示此帮助
-• clear/cls - 清屏
-• memory - 显示保存的信息""")
+    help_commands = get_prompt("help_commands")
     
-    ai_features = get_ui_prompt("ai_features", fallback="""🤖 AI助手功能:
-• 自动记住您提到的个人信息
-• 可以回忆之前的对话内容
-• 执行数学计算
-• 日常对话和问答
-• 基于DeepSeek-R1-0528的增强推理能力
-• Python代码执行 - 数据分析、绘图、计算
-• MCP服务集成 - 时间查询、网页抓取、外部内存""")
+    ai_features = get_prompt("ai_features")
     
-    mcp_examples = get_ui_prompt("mcp_examples", fallback="""🔗 MCP功能示例:
-• '现在几点了？' - 获取当前时间
-• '抓取网页内容' - 获取网页信息
-• '用Python画图' - 执行代码并生成图表
-• '分析数据' - 数据处理和分析""")
+    mcp_examples = get_prompt("mcp_examples")
     
     print(f"\n{help_commands}")
     print(f"\n{ai_features}")
@@ -119,10 +95,10 @@ def show_memory():
     """显示保存的记忆"""
     memory_store = get_memory_store()
     
-    memory_title = get_ui_prompt("memory_title", fallback="🧠 已保存的信息:")
-    facts_header = get_ui_prompt("memory_facts_header", fallback="📋 事实信息:")
-    preferences_header = get_ui_prompt("memory_preferences_header", fallback="❤️ 偏好信息:")
-    no_memory_msg = get_ui_prompt("no_memory_message", fallback="还没有保存任何信息")
+    memory_title = get_prompt("memory_title")
+    facts_header = get_prompt("memory_facts_header")
+    preferences_header = get_prompt("memory_preferences_header")
+    no_memory_msg = get_prompt("no_memory_message")
     
     print(f"\n{memory_title}")
     
