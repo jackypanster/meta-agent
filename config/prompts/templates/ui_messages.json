@@ -1,0 +1,152 @@
+{
+  "version": "1.0.0",
+  "default_locale": "zh",
+  "prompts": {
+    "welcome_title": {
+      "content": "🤖 Qwen-Agent MVP - DeepSeek 增强版",
+      "description": "欢迎界面标题",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "welcome", "title"],
+      "source": "src/ui/helpers.py:23"
+    },
+    "welcome_subtitle": {
+      "content": "基于 $model_info 的AI助手：",
+      "description": "欢迎界面副标题，显示模型信息",
+      "variables": ["model_info"],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "welcome", "subtitle"],
+      "source": "src/ui/helpers.py:25"
+    },
+    "features_list": {
+      "content": "• 🧠 记忆功能 - 记住您的信息\n• 🧮 数学计算 - 复杂运算和公式\n• 📊 代码执行 - Python分析和可视化\n• 🌐 MCP服务 - 时间、网页抓取、外部记忆\n• 💬 智能对话 - 自然语言理解",
+      "description": "功能特性列表",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "features"],
+      "source": "src/ui/helpers.py:27-31"
+    },
+    "deepseek_r1_hint": {
+      "content": "💡 提示: 设置环境变量 USE_DEEPSEEK_R1=true 可使用R1推理模型",
+      "description": "DeepSeek R1模型使用提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "hint", "deepseek"],
+      "source": "src/ui/helpers.py:33"
+    },
+    "example_conversations": {
+      "content": "- 你好，我叫张三，喜欢编程\n- 我喜欢什么？\n- 计算 (2+3)*5 的结果\n- 生成一个简单的图表\n- 抓取网页 https://www.ruanyifeng.com/blog/\n- help (显示帮助)\n- quit (退出)",
+      "description": "示例对话列表",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "examples"],
+      "source": "src/ui/helpers.py:35-42"
+    },
+    "help_commands": {
+      "content": "• quit/exit/q - 退出程序\n• help/h - 显示此帮助\n• clear/cls - 清屏\n• memory/mem - 查看记忆信息",
+      "description": "帮助命令列表",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "help", "commands"],
+      "source": "src/ui/helpers.py:48-51"
+    },
+    "ai_features": {
+      "content": "🤖 AI助手功能:\n• 自动记住您提到的个人信息\n• 回答问题时会回忆相关记忆\n• 支持复杂数学计算和代码执行\n• 可访问实时信息和外部服务",
+      "description": "AI助手功能介绍",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "features", "ai"],
+      "source": "src/ui/helpers.py:52-55"
+    },
+    "conversation_start": {
+      "content": "✨ 开始对话吧！(使用$model_display)",
+      "description": "对话开始提示",
+      "variables": ["model_display"],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "conversation", "start"],
+      "source": "src/main.py:294"
+    },
+    "ai_loading": {
+      "content": "🔧 正在初始化AI模型...",
+      "description": "AI加载中提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "loading", "ai"],
+      "source": "src/main.py:227"
+    },
+    "ai_success": {
+      "content": "✓ AI助手初始化成功！",
+      "description": "AI初始化成功提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "success", "ai"],
+      "source": "src/main.py:282"
+    },
+    "mcp_loading": {
+      "content": "📡 正在加载MCP服务器配置...",
+      "description": "MCP服务器加载提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "loading", "mcp"],
+      "source": "src/main.py:240"
+    },
+    "ai_response_prefix": {
+      "content": "🤖 助手: ",
+      "description": "AI回复前缀",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "response", "prefix"],
+      "source": "src/main.py:324"
+    },
+    "goodbye_message": {
+      "content": "👋 再见！",
+      "description": "退出时的告别消息",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "goodbye"],
+      "source": "src/main.py:298,310"
+    },
+    "interrupt_message": {
+      "content": "👋 程序被用户中断，再见！",
+      "description": "用户中断程序时的消息",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "interrupt"],
+      "source": "src/main.py:387"
+    }
+  },
+  "metadata": {
+    "created": "2025-06-16T08:30:00.000Z",
+    "updated": "2025-06-16T08:30:00.000Z",
+    "author": "System",
+    "description": "User interface messages extracted from ui/helpers.py and main.py"
+  }
+} 

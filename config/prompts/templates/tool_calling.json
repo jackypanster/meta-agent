@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "default_locale": "zh",
+  "prompts": {
+    "tool_calling_intro": {
+      "content": "我现在可以使用以下工具来帮助您：\n$available_tools\n\n根据您的需求，我会自动选择合适的工具。",
+      "description": "工具调用介绍提示",
+      "variables": ["available_tools"],
+      "category": "tool_calling",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["tools", "introduction"]
+    },
+    "tool_calling_result": {
+      "content": "我使用了 $tool_name 工具，结果如下：\n$tool_result\n\n这个结果对您有帮助吗？还需要其他信息吗？",
+      "description": "工具调用结果展示提示",
+      "variables": ["tool_name", "tool_result"],
+      "category": "tool_calling",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["tools", "result"]
+    },
+    "tool_calling_error": {
+      "content": "抱歉，在使用 $tool_name 工具时遇到了问题：$error_message\n\n让我尝试其他方式帮助您，或者您可以重新描述您的需求。",
+      "description": "工具调用错误处理提示",
+      "variables": ["tool_name", "error_message"],
+      "category": "tool_calling",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["tools", "error"]
+    }
+  },
+  "metadata": {
+    "created": "2025-06-16T08:30:00.000Z",
+    "updated": "2025-06-16T08:30:00.000Z",
+    "author": "System",
+    "description": "Tool calling related prompt templates"
+  }
+} 

@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "taskmaster-ai": {
+      "command": "npx",
+      "args": ["-y", "task-master-ai", "mcp"],
+      "env": {
+        "DEEPSEEK_API_KEY": "your_deepseek_api_key_here",
+        "OPENROUTER_API_KEY": "your_openrouter_api_key_here"
+      }
+    }
+  }
+} 
