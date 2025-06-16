@@ -103,3 +103,27 @@ dmypy.json
 
 # uv
 uv.lock 
+
+# Additional cleanup patterns
+*.bak
+*.backup
+*.tmp
+*.temp
+*.old
+*~
+.#*
+\#*#
+
+# Editor-specific files
+.roomodes
+.windsurfrules
+.cursor/rules/*.bak
+
+# Temporary analysis files
+exception_audit_report.json
+CLEANUP_REPORT.md
+.vulture_whitelist.py
+
+# Test artifacts
+test_mcp_watcher_demo.py
+*.test.log 
