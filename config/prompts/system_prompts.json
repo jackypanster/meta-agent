@@ -39,6 +39,123 @@
       "version": "1.0.0",
       "tags": ["agent", "description", "config"],
       "source": "src/main.py:279"
+    },
+    "r1_tip": {
+      "content": "💡 当前使用DeepSeek R1推理模型，具有更强的逻辑推理能力",
+      "description": "R1模型使用提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "tip", "r1"]
+    },
+    "stable_tip": {
+      "content": "🚀 当前使用DeepSeek稳定模型，响应速度更快",
+      "description": "稳定模型使用提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "tip", "stable"]
+    },
+    "welcome_title": {
+      "content": "🤖 欢迎使用 DeepSeek 增强版AI助手",
+      "description": "欢迎界面标题",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "welcome"]
+    },
+    "welcome_subtitle": {
+      "content": "当前模型: $model_info | 基于极端fail-fast原则构建",
+      "description": "欢迎界面副标题",
+      "variables": ["model_info"],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "welcome"]
+    },
+    "features_list": {
+      "content": "✨ 核心功能:\n• 智能对话和问题解答\n• 用户信息记忆和回忆\n• 数学计算和代码执行\n• MCP服务集成 (时间、网页抓取、外部存储)\n• 实时信息获取和数据分析",
+      "description": "功能列表",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "features"]
+    },
+    "example_commands": {
+      "content": "💡 示例命令:\n• \"我叫张三，我是程序员\" - 保存个人信息\n• \"我的名字是什么？\" - 回忆信息\n• \"计算 15 * 23 + 45\" - 数学计算\n• \"现在几点？\" - 获取当前时间\n• \"帮我分析这组数据\" - 代码执行和分析",
+      "description": "示例命令列表",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "examples"]
+    },
+    "help_commands": {
+      "content": "📚 帮助命令:\n• help - 显示帮助信息\n• memory - 查看已保存的信息\n• clear - 清空对话历史\n• exit/quit - 退出程序",
+      "description": "帮助命令列表",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "help"]
+    },
+    "ai_features": {
+      "content": "🧠 AI能力:\n• 自然语言理解和生成\n• 逻辑推理和问题解决\n• 代码编写和调试\n• 数据分析和可视化\n• 多轮对话上下文理解",
+      "description": "AI功能特性",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "features", "ai"]
+    },
+    "mcp_examples": {
+      "content": "🔗 MCP服务示例:\n• \"现在北京时间几点？\" - 时间服务\n• \"抓取 https://example.com 的内容\" - 网页抓取\n• \"保存这个重要信息到外部存储\" - 外部存储\n• \"执行这段Python代码\" - 代码解释器",
+      "description": "MCP服务使用示例",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "mcp", "examples"]
+    },
+    "memory_title": {
+      "content": "🧠 记忆信息",
+      "description": "记忆信息标题",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "memory"]
+    },
+    "memory_facts_header": {
+      "content": "📝 事实信息:",
+      "description": "事实信息标题",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "memory"]
+    },
+    "memory_preferences_header": {
+      "content": "❤️ 偏好信息:",
+      "description": "偏好信息标题",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "memory"]
+    },
+    "no_memory_message": {
+      "content": "暂无保存的信息",
+      "description": "无记忆信息时的提示",
+      "variables": [],
+      "category": "ui",
+      "enabled": true,
+      "version": "1.0.0",
+      "tags": ["ui", "memory"]
     }
   },
   "metadata": {
