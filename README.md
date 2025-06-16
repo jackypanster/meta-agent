@@ -184,11 +184,18 @@ USE_DEEPSEEK_R1=false
     "time": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-time"],
-      "enabled": true
+      "enabled": true,
+      "description": "A simple time server",
+      "category": "utility"
     }
+  },
+  "global_settings": {
+    "max_concurrent_servers": 10
   }
 }
 ```
+
+**注意**: `mcp_servers.json`可以包含多种配置字段 (例如 `description`, `category`, `timeout`, 以及 `global_settings` 中的各项)。然而，Agent本身在 `src/main.py` 的 `setup_mcp_servers` 函数中主要使用 `command`, `args`, 和 `env` (如果提供) 来启动和与这些服务器交互。文件中的其他字段可能是供服务器进程自身使用，或供解析此配置文件的其他工具使用。
 
 ## 🧪 测试
 

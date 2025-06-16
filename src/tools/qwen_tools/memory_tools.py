@@ -16,6 +16,47 @@ MEMORY_STORE: Dict[str, Any] = {
     'preferences': [], # 用户偏好
     'history': []     # 对话历史
 }
+"""
+Global in-memory store for agent's short-term memory.
+
+Structure:
+{
+    'facts': [
+        {
+            'content': str,  // The factual information, e.g., "User's name is Alex."
+            'timestamp': float, // Unix timestamp of when the fact was recorded.
+            'time_str': str   // Human-readable timestamp, e.g., "2023-10-26 14:30:00"
+        },
+        // ... more facts
+    ],
+    'preferences': [
+        {
+            'content': str,  // User's preference, e.g., "User prefers concise answers."
+            'timestamp': float,
+            'time_str': str
+        },
+        // ... more preferences
+    ],
+    'history': [
+        {
+            'user': str, // User's utterance
+            'assistant': str, // Assistant's response
+            'timestamp': float
+        },
+        // ... more conversation turns
+    ]
+}
+
+Purpose of each key:
+- 'facts': Stores pieces of information explicitly stated by the user or inferred as factual.
+           Used by `custom_save_info` and `custom_recall_info`.
+- 'preferences': Stores user preferences, which might guide the agent's behavior or responses.
+                 Used by `custom_save_info` and `custom_recall_info`.
+- 'history': Keeps a record of the conversation turns (user input and assistant response).
+             This is primarily managed by the main application loop in `src/main.py`
+             to maintain conversation context for the LLM and for simple session review.
+             The `custom_recall_info` tool does NOT currently search this history, only 'facts' and 'preferences'.
+"""
 
 
 @register_tool('custom_save_info')
