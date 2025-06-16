@@ -32,12 +32,15 @@ class MCPConfigLoader:
     """
     
     def __init__(self, config_path: str = "config/mcp_servers.json", 
-                 schema_path: str = "config/mcp_servers_schema.json"):
+                 schema_path: str = "config/mcp_servers_schema.json") -> None:
         """初始化配置加载器
         
         Args:
             config_path: MCP配置文件路径
             schema_path: JSON Schema文件路径
+            
+        Raises:
+            MCPConfigError: 配置文件不存在时立即抛出
         """
         self.config_path = Path(config_path)
         self.schema_path = Path(schema_path)
@@ -50,7 +53,15 @@ class MCPConfigLoader:
             raise MCPConfigError(f"MCP配置文件不存在: {self.config_path}")
     
     def _load_schema(self) -> Dict[str, Any]:
-        """加载JSON Schema - 失败时立即抛出异常"""
+        """加载JSON Schema - 失败时立即抛出异常
+        
+        Returns:
+            JSON Schema字典
+            
+        Raises:
+            MCPConfigError: Schema文件不存在时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+        """
         if self._schema_cache is None and self.schema_path.exists():
             with open(self.schema_path, 'r', encoding='utf-8') as f:
                 self._schema_cache = json.load(f)
@@ -61,7 +72,15 @@ class MCPConfigLoader:
         return self._schema_cache
     
     def _validate_config(self, config: Dict[str, Any]) -> None:
-        """验证配置文件格式 - 验证失败时立即抛出异常"""
+        """验证配置文件格式 - 验证失败时立即抛出异常
+        
+        Args:
+            config: 配置字典
+            
+        Raises:
+            MCPConfigError: Schema加载失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
+        """
         schema = self._load_schema()  # 这会在schema不存在时抛出异常
         
         # 使用jsonschema验证，任何验证错误都会立即抛出
@@ -78,7 +97,9 @@ class MCPConfigLoader:
             配置字典
             
         Raises:
-            MCPConfigError: 配置文件加载或验证失败
+            MCPConfigError: 配置文件加载或验证失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         current_mtime = self.config_path.stat().st_mtime
         
@@ -111,6 +132,11 @@ class MCPConfigLoader:
         
         Returns:
             启用的服务器配置字典
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         config = self.load_config()
         servers = config.get('servers', {})
@@ -132,6 +158,11 @@ class MCPConfigLoader:
             
         Returns:
             服务器配置字典，如果不存在或未启用则返回None
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         enabled_servers = self.get_enabled_servers()
         return enabled_servers.get(server_name)
@@ -144,6 +175,11 @@ class MCPConfigLoader:
             
         Returns:
             指定分类的服务器配置字典
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         enabled_servers = self.get_enabled_servers()
         return {
@@ -157,6 +193,11 @@ class MCPConfigLoader:
         
         Returns:
             全局设置字典
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         config = self.load_config()
         return config.get('global_settings', {})
@@ -166,6 +207,11 @@ class MCPConfigLoader:
         
         Returns:
             分类定义字典
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         config = self.load_config()
         return config.get('categories', {})
@@ -178,6 +224,11 @@ class MCPConfigLoader:
             
         Returns:
             服务器名称列表
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         if enabled_only:
             return list(self.get_enabled_servers().keys())
@@ -193,10 +244,13 @@ class MCPConfigLoader:
             
         Returns:
             是否启用
+            
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
         """
         return server_name in self.get_enabled_servers()
-    
-
     
     def get_config_info(self) -> Dict[str, Any]:
         """获取配置文件信息
@@ -221,20 +275,24 @@ class MCPConfigLoader:
         }
     
     def reload_config(self) -> None:
-        """强制重新加载配置文件 - 失败时立即抛出异常"""
-        old_config = self._config_cache.copy() if self._config_cache else {}
-        self.load_config(force_reload=True)
+        """重新加载配置文件 - 失败时立即抛出异常
         
-        # 检查配置是否有变化
-        new_config = self._config_cache
-        if old_config != new_config:
-            logger.info("配置文件已更新并重新加载")
-        else:
-            logger.debug("配置文件无变化")
+        Raises:
+            MCPConfigError: 配置加载失败时立即抛出
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            ValidationError: 配置验证失败时立即抛出
+        """
+        self._config_cache = None
+        self._schema_cache = None
+        self._last_modified = None
+        
+        # 强制重新加载配置
+        self.load_config(force_reload=True)
+        logger.info("MCP配置已重新加载")
 
 
 # 全局配置加载器实例
-_global_loader: Optional[MCPConfigLoader] = None
+_config_loader_instance: Optional[MCPConfigLoader] = None
 
 
 def get_mcp_config_loader(config_path: str = "config/mcp_servers.json",
@@ -242,21 +300,22 @@ def get_mcp_config_loader(config_path: str = "config/mcp_servers.json",
     """获取全局MCP配置加载器实例
     
     Args:
-        config_path: 配置文件路径
-        schema_path: Schema文件路径
+        config_path: MCP配置文件路径
+        schema_path: JSON Schema文件路径
         
     Returns:
         MCPConfigLoader实例
+        
+    Raises:
+        MCPConfigError: 配置加载器初始化失败时立即抛出
     """
-    global _global_loader
-    
-    if _global_loader is None:
-        _global_loader = MCPConfigLoader(config_path, schema_path)
-    
-    return _global_loader
+    global _config_loader_instance
+    if _config_loader_instance is None:
+        _config_loader_instance = MCPConfigLoader(config_path, schema_path)
+    return _config_loader_instance
 
 
-def reset_mcp_config_loader():
+def reset_mcp_config_loader() -> None:
     """重置全局配置加载器实例（主要用于测试）"""
-    global _global_loader
-    _global_loader = None 
+    global _config_loader_instance
+    _config_loader_instance = None 

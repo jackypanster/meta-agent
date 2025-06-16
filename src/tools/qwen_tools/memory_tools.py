@@ -6,12 +6,12 @@
 
 import json
 import time
-from typing import Dict
+from typing import Dict, Any
 
 from qwen_agent.tools.base import BaseTool, register_tool
 
 # 简单的内存存储 - 直接用字典，不搞复杂的
-MEMORY_STORE = {
+MEMORY_STORE: Dict[str, Any] = {
     'facts': [],      # 用户事实信息
     'preferences': [], # 用户偏好
     'history': []     # 对话历史
@@ -35,6 +35,20 @@ class SaveInfoTool(BaseTool):
     }]
 
     def call(self, params: str, **kwargs) -> str:
+        """保存用户信息 - 失败时立即抛出异常
+        
+        Args:
+            params: JSON格式的参数字符串
+            **kwargs: 其他关键字参数
+            
+        Returns:
+            JSON格式的保存结果
+            
+        Raises:
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            KeyError: 必需参数缺失时立即抛出
+            Exception: 任何其他异常都会立即传播
+        """
         data = json.loads(params)
         info = data['info']
         info_type = data.get('type', 'fact')
@@ -69,6 +83,20 @@ class RecallInfoTool(BaseTool):
     }]
 
     def call(self, params: str, **kwargs) -> str:
+        """搜索用户信息 - 失败时立即抛出异常
+        
+        Args:
+            params: JSON格式的参数字符串
+            **kwargs: 其他关键字参数
+            
+        Returns:
+            JSON格式的搜索结果
+            
+        Raises:
+            json.JSONDecodeError: JSON解析失败时立即抛出
+            KeyError: 必需参数缺失时立即抛出
+            Exception: 任何其他异常都会立即传播
+        """
         data = json.loads(params)
         query = data['query'].lower()
         
@@ -96,6 +124,10 @@ class RecallInfoTool(BaseTool):
             })
 
 
-def get_memory_store() -> Dict:
-    """获取内存存储的引用，供外部模块使用"""
+def get_memory_store() -> Dict[str, Any]:
+    """获取内存存储的引用，供外部模块使用
+    
+    Returns:
+        内存存储字典的引用
+    """
     return MEMORY_STORE 

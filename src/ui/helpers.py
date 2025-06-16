@@ -8,6 +8,7 @@ UI帮助函数模块
 """
 
 import os
+from typing import Dict, Any, Optional
 
 from src.config.settings import get_config
 from src.config.prompt_manager import PromptManager, PromptManagerError
@@ -16,19 +17,37 @@ from src.config.prompt_manager import PromptManager, PromptManagerError
 from src.tools.qwen_tools.memory_tools import get_memory_store
 
 # UI提示词管理器
-ui_prompt_manager = None
+ui_prompt_manager: Optional[PromptManager] = None
 
 
-def initialize_ui_prompts():
-    """初始化UI提示词管理器 - 失败时立即抛出异常"""
+def initialize_ui_prompts() -> PromptManager:
+    """初始化UI提示词管理器 - 失败时立即抛出异常
+    
+    Returns:
+        PromptManager实例
+        
+    Raises:
+        PromptManagerError: 提示词配置加载失败时立即抛出
+    """
     global ui_prompt_manager
     
     ui_prompt_manager = PromptManager("config/prompts")
     return ui_prompt_manager
 
 
-def get_prompt(prompt_key: str, variables: dict = None) -> str:
-    """获取UI提示词，配置缺失时快速失败"""
+def get_prompt(prompt_key: str, variables: Optional[Dict[str, Any]] = None) -> str:
+    """获取UI提示词，配置缺失时快速失败
+    
+    Args:
+        prompt_key: 提示词键
+        variables: 变量替换字典
+        
+    Returns:
+        提示词内容
+        
+    Raises:
+        PromptManagerError: 提示词不存在或配置错误时立即失败
+    """
     global ui_prompt_manager
     
     # 懒加载提示词管理器
@@ -38,10 +57,15 @@ def get_prompt(prompt_key: str, variables: dict = None) -> str:
     return ui_prompt_manager.get_prompt(prompt_key, variables)
 
 
-def show_welcome():
-    """显示欢迎信息"""
+def show_welcome() -> None:
+    """显示欢迎信息
+    
+    Raises:
+        ConfigError: 配置加载失败时立即抛出
+        PromptManagerError: 提示词加载失败时立即抛出
+    """
     config = get_config()
-    use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
+    use_r1 = config.get_bool('USE_DEEPSEEK_R1')
     model_info = "DeepSeek-R1 推理模型" if use_r1 else "DeepSeek-V3 稳定模型"
     
     # 获取欢迎信息组件
@@ -61,8 +85,12 @@ def show_welcome():
     print(f"\n{example_commands}")
 
 
-def show_help():
-    """显示帮助信息"""
+def show_help() -> None:
+    """显示帮助信息
+    
+    Raises:
+        PromptManagerError: 提示词加载失败时立即抛出
+    """
     help_commands = get_prompt("help_commands")
     
     ai_features = get_prompt("ai_features")
@@ -74,8 +102,12 @@ def show_help():
     print(f"\n{mcp_examples}")
 
 
-def show_memory():
-    """显示保存的记忆"""
+def show_memory() -> None:
+    """显示保存的记忆
+    
+    Raises:
+        PromptManagerError: 提示词加载失败时立即抛出
+    """
     memory_store = get_memory_store()
     
     memory_title = get_prompt("memory_title")
@@ -99,7 +131,12 @@ def show_memory():
         print(f"  {no_memory_msg}")
 
 
-def clear_screen():
-    """清屏并重新显示欢迎信息"""
+def clear_screen() -> None:
+    """清屏并重新显示欢迎信息
+    
+    Raises:
+        ConfigError: 配置加载失败时立即抛出
+        PromptManagerError: 提示词加载失败时立即抛出
+    """
     os.system('clear' if os.name != 'nt' else 'cls')
     show_welcome() 

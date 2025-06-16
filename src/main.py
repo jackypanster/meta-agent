@@ -12,7 +12,7 @@ Qwen-Agent MVP - 简洁直观实现
 
 import time
 import requests
-from typing import Dict, List, Any
+from typing import Dict, List, Any, NoReturn
 
 # Qwen-Agent imports
 from qwen_agent.agents import Assistant
@@ -35,24 +35,27 @@ prompt_manager = None
 
 class APIConnectionError(Exception):
     """API连接错误"""
+    pass
 
 
 class ModelConfigError(Exception):
     """模型配置错误"""
+    pass
 
 
 class MCPConfigError(Exception):
     """MCP配置错误"""
+    pass
 
 
-def initialize_prompt_manager():
+def initialize_prompt_manager() -> PromptManager:
     """初始化PromptManager - 失败时立即抛出异常
     
     Returns:
         PromptManager实例
         
     Raises:
-        PromptManagerError: 提示词配置加载失败
+        PromptManagerError: 提示词配置加载失败时立即抛出
     """
     global prompt_manager
     
@@ -91,7 +94,7 @@ def setup_mcp_servers() -> Dict[str, Any]:
         MCP服务器配置字典，符合Qwen-Agent格式
         
     Raises:
-        MCPConfigError: MCP配置加载失败
+        MCPConfigError: MCP配置加载失败时立即抛出
     """
     # 获取MCP配置加载器
     config_loader = get_mcp_config_loader()
@@ -130,13 +133,20 @@ def setup_mcp_servers() -> Dict[str, Any]:
     return mcp_servers
 
 
-def create_llm_config() -> Dict:
-    """创建LLM配置 - 失败时立即抛出异常"""
+def create_llm_config() -> Dict[str, Any]:
+    """创建LLM配置 - 失败时立即抛出异常
+    
+    Returns:
+        LLM配置字典
+        
+    Raises:
+        ConfigError: 配置加载或API密钥验证失败时立即抛出
+    """
     
     config = get_config()
     
     # 检查是否要使用R1推理模型
-    use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
+    use_r1 = config.get_bool('USE_DEEPSEEK_R1')
     
     # 检查DeepSeek API密钥 - 失败时立即抛出异常
     api_key = config.require('DEEPSEEK_API_KEY')
@@ -176,7 +186,7 @@ def create_tools_list() -> List[Any]:
         工具列表，包含自定义工具和MCP服务器配置
         
     Raises:
-        MCPConfigError: MCP配置失败
+        MCPConfigError: MCP配置失败时立即抛出
     """
     # 设置MCP服务器
     mcp_servers = setup_mcp_servers()
@@ -195,8 +205,15 @@ def create_tools_list() -> List[Any]:
     return tools
 
 
-def main():
-    """主函数 - 专注于程序流程控制，失败时立即崩溃"""
+def main() -> NoReturn:
+    """主函数 - 专注于程序流程控制，失败时立即崩溃
+    
+    Raises:
+        PromptManagerError: 提示词配置失败时立即抛出
+        ConfigError: 配置加载失败时立即抛出
+        MCPConfigError: MCP配置失败时立即抛出
+        Exception: 任何其他异常都会立即传播导致程序崩溃
+    """
     # 1. 初始化提示词管理器
     initialize_prompt_manager()
     
@@ -238,7 +255,7 @@ def main():
     messages = []
     memory_store = get_memory_store()
     config = get_config()
-    use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
+    use_r1 = config.get_bool('USE_DEEPSEEK_R1')
     model_display = "DeepSeek-R1推理模型" if use_r1 else "DeepSeek-V3稳定模型"
     
     conversation_start_msg = get_prompt(
