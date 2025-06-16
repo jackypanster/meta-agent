@@ -131,8 +131,7 @@ def setup_mcp_servers() -> Dict[str, Any]:
         
         # 显示加载的服务器信息
         category = server_config.get('category', '未分类')
-        timeout = config_loader.get_server_timeout(server_name)
-        print(f"✓ 加载MCP服务器: {server_name} (分类: {category}, 超时: {timeout}s)")
+        print(f"✓ 加载MCP服务器: {server_name} (分类: {category})")
     
     print(f"📡 成功加载 {len(mcp_servers)} 个MCP服务器")
     return mcp_servers

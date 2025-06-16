@@ -7,30 +7,24 @@
       "args": ["mcp-server-time", "--local-timezone=Asia/Shanghai"],
       "enabled": true,
       "description": "时间和日期操作服务，支持亚洲/上海时区",
-      "category": "utility",
-      "timeout": 30
+      "category": "utility"
     },
     "fetch": {
       "command": "uvx", 
       "args": ["mcp-server-fetch"],
       "enabled": true,
       "description": "HTTP网页抓取服务，用于获取网页内容和实时信息",
-      "category": "network",
-      "timeout": 60
+      "category": "network"
     },
     "memory": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "enabled": true,
       "description": "外部内存存储服务，提供持久化数据存储功能",
-      "category": "storage",
-      "timeout": 30
+      "category": "storage"
     }
   },
   "global_settings": {
-    "default_timeout": 30,
-    "retry_attempts": 3,
-    "retry_delay": 1.0,
     "max_concurrent_servers": 10,
     "log_level": "INFO",
     "enable_hot_reload": true
@@ -57,8 +51,8 @@
     "notes": [
       "此配置文件定义了所有可用的MCP服务器",
       "可以通过设置enabled字段来启用/禁用特定服务器",
-      "timeout设置单位为秒，可以为每个服务器单独配置",
-      "支持热重载，修改配置文件后无需重启应用"
+      "支持热重载，修改配置文件后无需重启应用",
+      "遵循fail-fast原则：任何连接或配置问题都会立即失败"
     ]
   }
 } 

@@ -196,31 +196,7 @@ class MCPConfigLoader:
         """
         return server_name in self.get_enabled_servers()
     
-    def get_server_timeout(self, server_name: str) -> int:
-        """获取服务器超时设置 - 如果未配置则抛出异常
-        
-        Args:
-            server_name: 服务器名称
-            
-        Returns:
-            超时时间（秒）
-            
-        Raises:
-            MCPConfigError: 如果服务器不存在或未配置超时
-        """
-        server_config = self.get_server_config(server_name)
-        if not server_config:
-            raise MCPConfigError(f"❌ 服务器 '{server_name}' 不存在或未启用")
-        
-        if 'timeout' in server_config:
-            return server_config['timeout']
-        
-        # 检查全局设置
-        global_settings = self.get_global_settings()
-        if 'default_timeout' not in global_settings:
-            raise MCPConfigError(f"❌ 服务器 '{server_name}' 未配置超时，且全局设置中也未配置default_timeout")
-        
-        return global_settings['default_timeout']
+
     
     def get_config_info(self) -> Dict[str, Any]:
         """获取配置文件信息

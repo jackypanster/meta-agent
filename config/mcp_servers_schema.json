@@ -47,12 +47,7 @@
               "type": "string",
               "description": "服务器分类"
             },
-            "timeout": {
-              "type": "number",
-              "minimum": 1,
-              "maximum": 300,
-              "description": "服务器超时时间（秒）"
-            },
+
             "env": {
               "type": "object",
               "description": "环境变量设置",
@@ -70,26 +65,7 @@
     },
     "global_settings": {
       "type": "object",
-      "required": ["default_timeout", "retry_attempts"],
       "properties": {
-        "default_timeout": {
-          "type": "number",
-          "minimum": 1,
-          "maximum": 300,
-          "description": "默认超时时间（秒）"
-        },
-        "retry_attempts": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10,
-          "description": "重试次数"
-        },
-        "retry_delay": {
-          "type": "number",
-          "minimum": 0.1,
-          "maximum": 60,
-          "description": "重试延迟（秒）"
-        },
         "max_concurrent_servers": {
           "type": "integer",
           "minimum": 1,

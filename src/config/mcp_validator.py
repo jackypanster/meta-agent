@@ -220,18 +220,7 @@ class MCPConfigValidator:
                     ["所有参数都必须是字符串类型"]
                 )
         
-        # 验证超时设置
-        if 'timeout' in server_config:
-            timeout = server_config['timeout']
-            if not isinstance(timeout, (int, float)) or timeout <= 0:
-                raise MCPValidationError(
-                    f"服务器 '{server_name}' 的超时设置无效: {timeout}",
-                    f"servers.{server_name}.timeout",
-                    ["超时时间必须是大于0的数字（秒）"]
-                )
-            
-            if timeout > 300:  # 5分钟
-                logger.warning(f"服务器 '{server_name}' 的超时时间过长: {timeout}秒")
+
         
         # 验证分类
         if 'category' in server_config:
@@ -285,35 +274,7 @@ class MCPConfigValidator:
                 ["请确保 global_settings 是一个对象"]
             )
         
-        # 验证默认超时
-        if 'default_timeout' in global_settings:
-            timeout = global_settings['default_timeout']
-            if not isinstance(timeout, (int, float)) or timeout <= 0:
-                raise MCPValidationError(
-                    f"默认超时时间无效: {timeout}",
-                    "global_settings.default_timeout",
-                    ["默认超时时间必须是大于0的数字（秒）"]
-                )
-        
-        # 验证重试次数
-        if 'retry_attempts' in global_settings:
-            retry = global_settings['retry_attempts']
-            if not isinstance(retry, int) or retry < 0:
-                raise MCPValidationError(
-                    f"重试次数无效: {retry}",
-                    "global_settings.retry_attempts",
-                    ["重试次数必须是非负整数"]
-                )
-        
-        # 验证重试延迟
-        if 'retry_delay' in global_settings:
-            delay = global_settings['retry_delay']
-            if not isinstance(delay, (int, float)) or delay < 0:
-                raise MCPValidationError(
-                    f"重试延迟无效: {delay}",
-                    "global_settings.retry_delay",
-                    ["重试延迟必须是非负数字（秒）"]
-                )
+
         
         # 验证日志级别
         if 'log_level' in global_settings:
