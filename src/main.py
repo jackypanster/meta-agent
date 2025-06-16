@@ -86,15 +86,16 @@ def get_prompt(prompt_key: str, variables: Dict[str, Any] = None) -> str:
 
 
 def setup_mcp_servers() -> Dict[str, Any]:
-    """设置MCP服务器配置 - 失败时立即抛出异常
+    """
+    Loads and formats enabled MCP server configurations for use as agent tools.
     
-    从配置文件动态加载启用的MCP服务器
+    Dynamically retrieves enabled MCP servers from configuration, converts each to the format required by Qwen-Agent (including command, arguments, and optional environment variables), and returns a dictionary mapping server names to their configurations.
     
-    Returns:
-        MCP服务器配置字典，符合Qwen-Agent格式
-        
     Raises:
-        MCPConfigError: MCP配置加载失败时立即抛出
+        MCPConfigError: If no servers are enabled or if any server configuration is missing.
+        
+    Returns:
+        A dictionary of MCP server configurations compatible with Qwen-Agent.
     """
     # 获取MCP配置加载器
     config_loader = get_mcp_config_loader()
@@ -182,15 +183,14 @@ def create_llm_config() -> Dict[str, Any]:
 
 
 def create_tools_list() -> List[Any]:
-    """创建工具列表 - 失败时立即抛出异常
+    """
+    Constructs and returns a list of tools for the conversational agent, including custom tools, dynamically loaded MCP server configurations, and a built-in code interpreter.
     
-    动态构建包含MCP服务器的工具列表
-    
-    Returns:
-        工具列表，包含自定义工具和MCP服务器配置
-        
     Raises:
-        MCPConfigError: MCP配置失败时立即抛出
+        MCPConfigError: If MCP server setup fails.
+        
+    Returns:
+        A list containing tool identifiers and MCP server configurations for agent use.
     """
     # 设置MCP服务器
     mcp_servers = setup_mcp_servers()
@@ -213,13 +213,10 @@ def create_tools_list() -> List[Any]:
 
 
 def main() -> NoReturn:
-    """主函数 - 专注于程序流程控制，失败时立即崩溃
+    """
+    Runs the main program loop for the conversational AI CLI, handling initialization, agent setup, and user interaction.
     
-    Raises:
-        PromptManagerError: 提示词配置失败时立即抛出
-        ConfigError: 配置加载失败时立即抛出
-        MCPConfigError: MCP配置失败时立即抛出
-        Exception: 任何其他异常都会立即传播导致程序崩溃
+    Initializes the prompt manager, displays welcome and loading messages, configures the language model and tools, and creates the conversational agent. Enters a continuous loop to process user input, handle special commands (quit, help, clear, memory), and interact with the agent. Streams AI responses, manages message history, and maintains a capped in-memory conversation log. The function is designed to fail immediately on any configuration or runtime error.
     """
     # 1. 初始化提示词管理器
     initialize_prompt_manager()
