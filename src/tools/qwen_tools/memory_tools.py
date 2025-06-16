@@ -35,30 +35,26 @@ class SaveInfoTool(BaseTool):
     }]
 
     def call(self, params: str, **kwargs) -> str:
-        try:
-            data = json.loads(params)
-            info = data['info']
-            info_type = data.get('type', 'fact')
-            
-            # 简单保存到内存
-            entry = {
-                'content': info,
-                'timestamp': time.time(),
-                'time_str': time.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            if info_type == 'preference':
-                MEMORY_STORE['preferences'].append(entry)
-            else:
-                MEMORY_STORE['facts'].append(entry)
-            
-            return json.dumps({
-                'status': 'saved',
-                'message': f'已保存{info_type}: {info}'
-            }, ensure_ascii=False)
-            
-        except Exception as e:
-            return json.dumps({'error': f'保存失败: {str(e)}'})
+        data = json.loads(params)
+        info = data['info']
+        info_type = data.get('type', 'fact')
+        
+        # 简单保存到内存
+        entry = {
+            'content': info,
+            'timestamp': time.time(),
+            'time_str': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        if info_type == 'preference':
+            MEMORY_STORE['preferences'].append(entry)
+        else:
+            MEMORY_STORE['facts'].append(entry)
+        
+        return json.dumps({
+            'status': 'saved',
+            'message': f'已保存{info_type}: {info}'
+        }, ensure_ascii=False)
 
 
 @register_tool('custom_recall_info') 
@@ -73,35 +69,31 @@ class RecallInfoTool(BaseTool):
     }]
 
     def call(self, params: str, **kwargs) -> str:
-        try:
-            data = json.loads(params)
-            query = data['query'].lower()
-            
-            # 简单的关键词搜索
-            results = []
-            
-            for fact in MEMORY_STORE['facts']:
-                if query in fact['content'].lower():
-                    results.append(fact)
-                    
-            for pref in MEMORY_STORE['preferences']:
-                if query in pref['content'].lower():
-                    results.append(pref)
-            
-            if results:
-                return json.dumps({
-                    'found': True,
-                    'count': len(results),
-                    'results': results[-3:]  # 最近3条
-                }, ensure_ascii=False)
-            else:
-                return json.dumps({
-                    'found': False,
-                    'message': '没有找到相关信息'
-                })
+        data = json.loads(params)
+        query = data['query'].lower()
+        
+        # 简单的关键词搜索
+        results = []
+        
+        for fact in MEMORY_STORE['facts']:
+            if query in fact['content'].lower():
+                results.append(fact)
                 
-        except Exception as e:
-            return json.dumps({'error': f'搜索失败: {str(e)}'})
+        for pref in MEMORY_STORE['preferences']:
+            if query in pref['content'].lower():
+                results.append(pref)
+        
+        if results:
+            return json.dumps({
+                'found': True,
+                'count': len(results),
+                'results': results[-3:]  # 最近3条
+            }, ensure_ascii=False)
+        else:
+            return json.dumps({
+                'found': False,
+                'message': '没有找到相关信息'
+            })
 
 
 def get_memory_store() -> Dict:

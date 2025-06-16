@@ -139,24 +139,15 @@ def setup_mcp_servers() -> Dict[str, Any]:
 
 
 def create_llm_config() -> Dict:
-    """创建LLM配置 - 从.env文件加载"""
+    """创建LLM配置 - 失败时立即抛出异常"""
     
-    try:
-        config = get_config()
-    except ConfigError as e:
-        raise ModelConfigError(f"配置加载失败: {str(e)}")
+    config = get_config()
     
     # 检查是否要使用R1推理模型
     use_r1 = config.get_bool('USE_DEEPSEEK_R1', False)
     
-    # 检查DeepSeek API密钥
-    try:
-        api_key = config.require('DEEPSEEK_API_KEY')
-    except ConfigError:
-        raise ModelConfigError(
-            "❌ 未找到DeepSeek API密钥！\n"
-            "请在.env文件中设置: DEEPSEEK_API_KEY=your-api-key"
-        )
+    # 检查DeepSeek API密钥 - 失败时立即抛出异常
+    api_key = config.require('DEEPSEEK_API_KEY')
     
     print("🔍 检测到DeepSeek API密钥")
     
@@ -169,8 +160,8 @@ def create_llm_config() -> Dict:
         model = 'deepseek-chat'  # V3-0324 稳定模型
         model_name = "DeepSeek V3 稳定模型"
     
-    # 暂时跳过连接测试以简化演示
-    print(f"⚡ 使用{model_name}(跳过连接测试)")
+    # 不进行连接测试 - 任何连接问题都在实际调用时立即暴露
+    print(f"⚡ 使用{model_name}")
     
     return {
         'model': model,

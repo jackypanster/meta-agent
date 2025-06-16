@@ -22,22 +22,18 @@ class CalculatorTool(BaseTool):
     }]
 
     def call(self, params: str, **kwargs) -> str:
-        try:
-            data = json.loads(params)
-            expression = data['expression']
-            
-            # 安全计算 - 只允许数学运算
-            allowed_names = {
-                k: v for k, v in math.__dict__.items() if not k.startswith("__")
-            }
-            allowed_names.update({"abs": abs, "round": round})
-            
-            result = eval(expression, {"__builtins__": {}}, allowed_names)
-            
-            return json.dumps({
-                'expression': expression,
-                'result': result
-            }, ensure_ascii=False)
-            
-        except Exception as e:
-            return json.dumps({'error': f'计算错误: {str(e)}'}) 
+        data = json.loads(params)
+        expression = data['expression']
+        
+        # 安全计算 - 只允许数学运算
+        allowed_names = {
+            k: v for k, v in math.__dict__.items() if not k.startswith("__")
+        }
+        allowed_names.update({"abs": abs, "round": round})
+        
+        result = eval(expression, {"__builtins__": {}}, allowed_names)
+        
+        return json.dumps({
+            'expression': expression,
+            'result': result
+        }, ensure_ascii=False) 
