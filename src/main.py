@@ -72,21 +72,14 @@ def get_prompt(prompt_key: str, variables: Dict[str, Any] = None) -> str:
         提示词内容
         
     Raises:
-        RuntimeError: 配置文件缺失或提示词不存在时立即失败
+        PromptManagerError: 提示词不存在或配置错误时立即失败
     """
     global prompt_manager
     
     if not prompt_manager:
-        raise RuntimeError(f"❌ PromptManager未初始化！无法获取提示词: {prompt_key}")
+        raise PromptManagerError(f"PromptManager未初始化！无法获取提示词: {prompt_key}")
     
-    try:
-        return prompt_manager.get_prompt(prompt_key, variables)
-    except Exception as e:
-        # 快速失败：配置问题应该立即暴露，而不是掩盖
-        raise RuntimeError(
-            f"❌ 提示词配置错误 '{prompt_key}': {str(e)}\n"
-            f"请检查配置文件 config/prompts/ 是否存在且格式正确"
-        ) from e
+    return prompt_manager.get_prompt(prompt_key, variables)
 
 
 def setup_mcp_servers() -> Dict[str, Any]:

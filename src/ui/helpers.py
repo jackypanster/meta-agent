@@ -20,18 +20,11 @@ ui_prompt_manager = None
 
 
 def initialize_ui_prompts():
-    """初始化UI提示词管理器"""
+    """初始化UI提示词管理器 - 失败时立即抛出异常"""
     global ui_prompt_manager
     
-    try:
-        ui_prompt_manager = PromptManager("config/prompts")
-        return ui_prompt_manager
-    except PromptManagerError as e:
-        # 静默失败，使用后备文本
-        return None
-    except Exception as e:
-        # 静默失败，使用后备文本
-        return None
+    ui_prompt_manager = PromptManager("config/prompts")
+    return ui_prompt_manager
 
 
 def get_prompt(prompt_key: str, variables: dict = None) -> str:
@@ -42,17 +35,7 @@ def get_prompt(prompt_key: str, variables: dict = None) -> str:
     if ui_prompt_manager is None:
         initialize_ui_prompts()
     
-    if not ui_prompt_manager:
-        raise RuntimeError(f"❌ UI PromptManager未初始化！无法获取提示词: {prompt_key}")
-    
-    try:
-        return ui_prompt_manager.get_prompt(prompt_key, variables)
-    except Exception as e:
-        # 快速失败：UI配置问题应该立即暴露
-        raise RuntimeError(
-            f"❌ UI提示词配置错误 '{prompt_key}': {str(e)}\n"
-            f"请检查配置文件 config/prompts/templates/ui_messages.json 是否存在且格式正确"
-        ) from e
+    return ui_prompt_manager.get_prompt(prompt_key, variables)
 
 
 def show_welcome():
