@@ -65,6 +65,7 @@
     },
     "global_settings": {
       "type": "object",
+      "description": "Global settings for MCP servers. Note: Not all settings are used by the agent itself; some are for the MCP server processes. For example, the agent follows a fail-fast principle and does not implement retries for tool calls.",
       "properties": {
         "max_concurrent_servers": {
           "type": "integer",

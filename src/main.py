@@ -108,6 +108,10 @@ def setup_mcp_servers() -> Dict[str, Any]:
     # 构建Qwen-Agent格式的MCP配置
     mcp_servers = {}
     
+    # This function intentionally only uses a subset of the MCP server
+    # configuration (command, args, env) for the agent's tool setup.
+    # Other fields in mcp_servers.json might be for the server
+    # processes themselves or other administrative purposes.
     for server_name in enabled_servers:
         server_config = config_loader.get_server_config(server_name)
         if not server_config:
@@ -192,6 +196,9 @@ def create_tools_list() -> List[Any]:
     mcp_servers = setup_mcp_servers()
     
     # 构建工具列表
+    # These tools are explicitly listed to ensure their availability to the agent.
+    # Relying on potential auto-discovery mechanisms of the Qwen framework
+    # is not currently implemented or confirmed for this project.
     tools = [
         'custom_save_info', 
         'custom_recall_info', 
@@ -292,7 +299,10 @@ def main() -> NoReturn:
         ai_response_prefix = get_prompt("ai_response_prefix")
         print(f"\n{ai_response_prefix}", end='', flush=True)
         
-        # 调用Agent并流式显示 - 任何异常都立即抛出
+        # 调用Agent并流式显示.
+        # 注意: 任何来自 agent.run() 的异常 (例如工具执行错误、LLM API错误等)
+        # 在这里都没有被捕获，这是为了确保当前交互轮次的 fail-fast 行为。
+        # 这种设计符合项目立即暴露问题的原则。
         response_text = ""
         response_messages = agent.run(messages=messages)
         
