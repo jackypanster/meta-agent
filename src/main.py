@@ -86,15 +86,16 @@ def get_prompt(prompt_key: str, variables: Dict[str, Any] = None) -> str:
 
 
 def setup_mcp_servers() -> Dict[str, Any]:
-    """设置MCP服务器配置 - 失败时立即抛出异常
+    """
+    Loads and formats enabled MCP server configurations for use as agent tools.
     
-    从配置文件动态加载启用的MCP服务器
+    Dynamically retrieves enabled MCP servers from configuration, extracting only the fields required by the agent (command, args, and optionally env) and returning them in the format expected by Qwen-Agent. Raises MCPConfigError if no servers are enabled or if a server's configuration is missing.
     
     Returns:
-        MCP服务器配置字典，符合Qwen-Agent格式
-        
+        A dictionary mapping server names to their Qwen-Agent-compatible configuration.
+    
     Raises:
-        MCPConfigError: MCP配置加载失败时立即抛出
+        MCPConfigError: If no enabled servers are found or a server configuration is missing.
     """
     # 获取MCP配置加载器
     config_loader = get_mcp_config_loader()
@@ -182,15 +183,16 @@ def create_llm_config() -> Dict[str, Any]:
 
 
 def create_tools_list() -> List[Any]:
-    """创建工具列表 - 失败时立即抛出异常
+    """
+    Constructs and returns the list of tools available to the conversational agent.
     
-    动态构建包含MCP服务器的工具列表
+    The tool list includes custom tools, dynamically loaded MCP server configurations, and a built-in code interpreter. Raises an exception if MCP server setup fails.
     
     Returns:
-        工具列表，包含自定义工具和MCP服务器配置
-        
+        A list containing custom tool identifiers, a dictionary of MCP server configurations, and the code interpreter tool.
+    
     Raises:
-        MCPConfigError: MCP配置失败时立即抛出
+        MCPConfigError: If MCP server configuration fails.
     """
     # 设置MCP服务器
     mcp_servers = setup_mcp_servers()
@@ -213,13 +215,10 @@ def create_tools_list() -> List[Any]:
 
 
 def main() -> NoReturn:
-    """主函数 - 专注于程序流程控制，失败时立即崩溃
+    """
+    Runs the main program loop for the conversational AI CLI, handling initialization, user interaction, and conversation management.
     
-    Raises:
-        PromptManagerError: 提示词配置失败时立即抛出
-        ConfigError: 配置加载失败时立即抛出
-        MCPConfigError: MCP配置失败时立即抛出
-        Exception: 任何其他异常都会立即传播导致程序崩溃
+    Initializes the prompt manager, displays welcome and loading messages, configures the LLM and tools, and creates the conversational agent. Enters an interactive loop to process user input, handle special commands (help, clear, memory, exit), manage conversation history, and stream AI responses. Conversation pairs are stored in a simple memory store, retaining the latest 50 exchanges. Any configuration or runtime errors propagate immediately, causing the program to terminate.
     """
     # 1. 初始化提示词管理器
     initialize_prompt_manager()
