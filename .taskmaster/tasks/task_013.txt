@@ -1,0 +1,231 @@
+# Task ID: 13
+# Title: Separate MCP Configuration to External JSON Files
+# Status: done
+# Dependencies: 12
+# Priority: high
+# Description: Extract hardcoded MCP server configurations from main.py into a dedicated JSON configuration file system to improve maintainability and enable dynamic configuration updates.
+# Details:
+Implement configuration separation for MCP servers:
+
+1. **Create Configuration File Structure**:
+   - Create `config/mcp_servers.json` with standardized format:
+   ```json
+   {
+     "version": "1.0",
+     "servers": {
+       "time": {
+         "command": "npx",
+         "args": ["-y", "@modelcontextprotocol/server-time"],
+         "enabled": true,
+         "description": "Time and date operations"
+       },
+       "fetch": {
+         "command": "npx", 
+         "args": ["-y", "@modelcontextprotocol/server-fetch"],
+         "enabled": true,
+         "description": "HTTP fetch operations"
+       },
+       "memory": {
+         "command": "npx",
+         "args": ["-y", "@modelcontextprotocol/server-memory"],
+         "enabled": true,
+         "description": "Memory storage operations"
+       }
+     },
+     "global_settings": {
+       "timeout": 30,
+       "retry_attempts": 3
+     }
+   }
+   ```
+
+2. **Implement Configuration Loader**:
+   - Create `src/qwen_agent_mvp/config/mcp_config.py`:
+   ```python
+   import json
+   import os
+   from typing import Dict, Any, Optional
+   from pathlib import Path
+   import logging
+
+   logger = logging.getLogger(__name__)
+
+   class MCPConfigLoader:
+       def __init__(self, config_path: str = "config/mcp_servers.json"):
+           self.config_path = Path(config_path)
+           self._config_cache: Optional[Dict[str, Any]] = None
+           self._last_modified: Optional[float] = None
+
+       def load_config(self) -> Dict[str, Any]:
+           """Load MCP configuration with caching and hot reload support"""
+           if not self.config_path.exists():
+               raise FileNotFoundError(f"MCP config file not found: {self.config_path}")
+           
+           current_mtime = self.config_path.stat().st_mtime
+           if self._config_cache is None or current_mtime != self._last_modified:
+               with open(self.config_path, 'r') as f:
+                   self._config_cache = json.load(f)
+               self._last_modified = current_mtime
+               logger.info(f"Loaded MCP configuration from {self.config_path}")
+           
+           return self._config_cache
+
+       def get_enabled_servers(self) -> Dict[str, Dict[str, Any]]:
+           """Get only enabled MCP servers"""
+           config = self.load_config()
+           return {
+               name: server_config 
+               for name, server_config in config["servers"].items()
+               if server_config.get("enabled", True)
+           }
+
+       def get_server_config(self, server_name: str) -> Optional[Dict[str, Any]]:
+           """Get configuration for specific server"""
+           servers = self.get_enabled_servers()
+           return servers.get(server_name)
+   ```
+
+3. **Refactor Existing Code**:
+   - Update `main.py` to use configuration loader:
+   ```python
+   from qwen_agent_mvp.config.mcp_config import MCPConfigLoader
+
+   def setup_mcp_servers():
+       config_loader = MCPConfigLoader()
+       enabled_servers = config_loader.get_enabled_servers()
+       
+       mcp_servers = {}
+       for name, config in enabled_servers.items():
+           mcp_servers[name] = {
+               "command": config["command"],
+               "args": config["args"]
+           }
+       return mcp_servers
+   ```
+
+4. **Add Configuration Validation**:
+   - Implement JSON schema validation for configuration files
+   - Add validation for required fields and data types
+   - Provide clear error messages for invalid configurations
+
+5. **Support Dynamic Updates**:
+   - Implement file watching for configuration changes
+   - Add reload functionality without restarting the application
+   - Ensure thread-safe configuration updates
+
+# Test Strategy:
+1) Verify configuration file is correctly loaded and parsed, 2) Test that only enabled servers are returned by get_enabled_servers(), 3) Validate configuration hot-reload functionality by modifying the JSON file during runtime, 4) Test error handling for missing or malformed configuration files, 5) Ensure main.py successfully uses the new configuration system instead of hardcoded values, 6) Verify that disabling servers in config prevents them from being loaded, 7) Test configuration validation catches invalid JSON schemas
+
+# Subtasks:
+## 1. Create MCP Configuration File Structure [done]
+### Dependencies: None
+### Description: Create the config directory and mcp_servers.json file with standardized JSON format for MCP server configurations
+### Details:
+Create config/mcp_servers.json with version, servers, and global_settings sections. Include configurations for time, fetch, and memory servers with command, args, enabled flag, and description fields. Add global timeout and retry settings.
+
+## 2. Implement MCPConfigLoader Class [done]
+### Dependencies: 13.1
+### Description: Create the configuration loader class with caching, hot reload support, and server filtering capabilities
+### Details:
+Implement src/qwen_agent_mvp/config/mcp_config.py with MCPConfigLoader class. Include load_config(), get_enabled_servers(), and get_server_config() methods. Add file modification time tracking for cache invalidation and logging support.
+
+## 3. Add Configuration Validation System [done]
+### Dependencies: 13.2
+### Description: Implement JSON schema validation for configuration files with comprehensive error handling
+### Details:
+Create validation schema for mcp_servers.json structure. Validate required fields (command, args), data types, and configuration integrity. Implement clear error messages for invalid configurations and missing required fields.
+<info added on 2025-06-15T15:20:04.313Z>
+✅ 子任务 13.3 实现完成
+
+## 实现内容
+
+### 1. 创建了 MCPConfigValidator 类 (src/config/mcp_validator.py)
+- **多层次验证系统**：
+  - JSON Schema 结构验证
+  - 业务逻辑验证  
+  - 配置完整性检查
+  - 分类一致性验证
+
+- **详细的错误处理**：
+  - 自定义 MCPValidationError 异常类
+  - 友好的错误信息和建议
+  - 字段路径定位
+  - 多语言错误信息（中文）
+
+- **验证功能**：
+  - 版本号格式验证 (x.y 或 x.y.z)
+  - 服务器名称格式验证（字母开头，字母数字下划线连字符）
+  - 命令和参数验证
+  - 超时值验证（正数，警告过长超时）
+  - 环境变量验证
+  - 日志级别验证
+  - 重试设置验证
+  - 分类引用一致性验证
+
+### 2. 创建了完整的单元测试 (tests/unit/test_mcp_validator.py)
+- **18个测试用例**覆盖所有验证场景：
+  - 有效配置验证
+  - 各种无效配置验证
+  - Schema文件验证
+  - 错误信息和建议验证
+  - 验证摘要功能测试
+  - 环境变量验证测试
+
+### 3. 验证器特性
+- **智能缓存**：JSON Schema文件缓存
+- **灵活配置**：可选择是否使用Schema文件
+- **详细摘要**：提供配置统计信息
+- **业务逻辑**：超出基本Schema的业务规则验证
+- **友好提示**：每个错误都包含具体的修复建议
+
+### 4. 测试结果
+- ✅ 所有18个单元测试通过
+- ✅ 演示脚本成功展示各种验证功能
+- ✅ 与现有配置文件完全兼容
+- ✅ 错误信息清晰友好，包含修复建议
+
+### 5. 集成准备
+验证器已准备好集成到 MCPConfigLoader 中，提供配置加载时的自动验证功能。
+</info added on 2025-06-15T15:20:04.313Z>
+
+## 4. Refactor Main.py to Use Configuration Loader [done]
+### Dependencies: 13.3
+### Description: Update existing hardcoded MCP server configurations in main.py to use the new configuration loader system
+### Details:
+Replace hardcoded MCP server configurations with MCPConfigLoader usage. Implement setup_mcp_servers() function to dynamically load enabled servers. Ensure backward compatibility and proper error handling for missing configurations.
+<info added on 2025-06-15T15:29:20.081Z>
+✅ 任务完成 - 已成功实现MCP配置的动态加载系统
+
+## 实现成果
+
+### 核心功能实现
+- **移除硬编码配置**: 完全删除main.py中的硬编码MCP服务器配置
+- **动态配置加载**: 通过MCPConfigLoader从外部JSON文件加载服务器配置
+- **格式转换**: 自动将配置文件格式转换为Qwen-Agent期望的格式
+- **优雅降级**: 配置文件不存在或损坏时自动使用默认配置(time, fetch, memory)
+
+### 新增函数和异常类
+- `setup_mcp_servers()`: 动态加载MCP服务器配置的核心函数
+- `create_tools_list()`: 创建包含MCP服务器的工具列表
+- `MCPConfigError`: MCP配置专用异常类
+
+### 错误处理和稳定性
+- 多层次错误处理机制确保程序在任何情况下都能正常运行
+- 详细的日志输出显示加载的服务器信息(名称、分类、超时等)
+- 向后兼容性保证，不影响现有功能
+
+### 测试验证
+- 创建了11个集成测试用例，覆盖所有功能场景
+- 测试包括配置加载、格式转换、错误处理、后备机制等
+- 所有测试通过，验证了系统的稳定性和可靠性
+
+### 实际效果
+启动时能够正确显示加载的MCP服务器信息，配置文件缺失时自动降级到默认配置，确保系统始终可用。
+</info added on 2025-06-15T15:29:20.081Z>
+
+## 5. Implement Dynamic Configuration Updates [done]
+### Dependencies: 13.4
+### Description: Add file watching and hot reload functionality for configuration changes without application restart
+### Details:
+Implement file system watching for configuration changes. Add thread-safe configuration reload functionality. Ensure MCP servers can be dynamically enabled/disabled and reconfigured without restarting the application. Handle configuration update errors gracefully.
+

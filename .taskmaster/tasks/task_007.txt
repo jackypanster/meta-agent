@@ -1,0 +1,236 @@
+# Task ID: 7
+# Title: Create CLI Interface
+# Status: done
+# Dependencies: 6
+# Priority: high
+# Description: Develop a command-line interface for users to interact with the agent, including multi-turn conversation support and graceful error handling
+# Details:
+Create src/qwen_agent_mvp/main.py:
+```python
+import asyncio
+import sys
+from rich.console import Console
+from rich.prompt import Prompt
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.live import Live
+from rich.spinner import Spinner
+from .config.settings import settings
+from .agent.llm_client import DeepSeekClient
+from .agent.core_agent import QwenAgentMVP
+
+console = Console()
+
+class CLI:
+    def __init__(self):
+        self.agent = None
+        self.conversation_history = []
+        
+    async def initialize(self):
+        """Initialize the agent and all components"""
+        with console.status("[bold green]Initializing Qwen-Agent MVP...") as status:
+            try:
+                # Initialize DeepSeek client
+                status.update("Connecting to DeepSeek API...")
+                deepseek_client = DeepSeekClient(
+                    api_key=settings.deepseek_api_key,
+                    base_url=settings.deepseek_base_url
+                )
+                
+                # Initialize agent
+                status.update("Setting up agent...")
+                self.agent = QwenAgentMVP(
+                    deepseek_client=deepseek_client,
+                    mcp_url=settings.mcp_server_url
+                )
+                
+                status.update("Connecting to MCP server and discovering tools...")
+                await self.agent.initialize()
+                
+                console.print("[bold green]✓ Agent initialized successfully![/bold green]")
+                console.print(f"[dim]Connected to MCP server with {len(self.agent.tools)} tools available[/dim]")
+                
+            except Exception as e:
+                console.print(f"[bold red]✗ Initialization failed: {str(e)}[/bold red]")
+                sys.exit(1)
+    
+    async def run(self):
+        """Main conversation loop"""
+        console.print(Panel.fit(
+            "[bold]Welcome to Qwen-Agent MVP![/bold]\n"
+            "Type your message and press Enter. Type 'exit' or 'quit' to leave.\n"
+            "Type 'help' for available commands.",
+            title="🤖 AI Assistant",
+            border_style="blue"
+        ))
+        
+        while True:
+            try:
+                # Get user input
+                user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]")
+                
+                # Handle special commands
+                if user_input.lower() in ['exit', 'quit', 'q']:
+                    console.print("\n[yellow]Goodbye! 👋[/yellow]")
+                    break
+                    
+                if user_input.lower() == 'help':
+                    self.show_help()
+                    continue
+                    
+                if user_input.lower() == 'clear':
+                    console.clear()
+                    continue
+                    
+                if user_input.lower() == 'history':
+                    self.show_history()
+                    continue
+                
+                # Process message with loading indicator
+                with console.status("[bold green]Thinking...", spinner="dots"):
+                    response = await self.agent.process_message(user_input)
+                
+                # Display response
+                console.print("\n[bold green]Assistant[/bold green]")
+                console.print(Panel(Markdown(response), border_style="green"))
+                
+                # Store in history
+                self.conversation_history.append({
+                    'user': user_input,
+                    'assistant': response
+                })
+                
+            except KeyboardInterrupt:
+                console.print("\n[yellow]Use 'exit' to quit properly.[/yellow]")
+            except Exception as e:
+                console.print(f"\n[bold red]Error: {str(e)}[/bold red]")
+                console.print("[dim]Please try again or type 'exit' to quit.[/dim]")
+    
+    def show_help(self):
+        """Display help information"""
+        help_text = """
+        **Available Commands:**
+        - `exit`, `quit`, `q` - Exit the application
+        - `help` - Show this help message
+        - `clear` - Clear the screen
+        - `history` - Show conversation history
+        
+        **Example Questions:**
+        - "What's the weather in Beijing?"
+        - "My name is Zhang San"
+        - "What's my name?" (to test memory)
+        - "Search for latest news about AI"
+        """
+        console.print(Panel(Markdown(help_text), title="Help", border_style="blue"))
+    
+    def show_history(self):
+        """Display conversation history"""
+        if not self.conversation_history:
+            console.print("[dim]No conversation history yet.[/dim]")
+            return
+            
+        for i, exchange in enumerate(self.conversation_history, 1):
+            console.print(f"\n[bold]Exchange {i}:[/bold]")
+            console.print(f"[cyan]You:[/cyan] {exchange['user']}")
+            console.print(f"[green]Assistant:[/green] {exchange['assistant']}")
+
+async def main():
+    """Entry point"""
+    cli = CLI()
+    await cli.initialize()
+    await cli.run()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted by user.[/yellow]")
+        sys.exit(0)
+```
+
+# Test Strategy:
+1) Test CLI initialization and error handling, 2) Verify user input processing and special commands, 3) Test conversation flow and history tracking, 4) Verify graceful shutdown on exit commands, 5) Test error recovery during conversations
+
+# Subtasks:
+## 1. Set up CLI project structure and dependencies [done]
+### Dependencies: None
+### Description: Create the main.py file in the correct directory structure and set up all required dependencies for the CLI interface
+### Details:
+Create src/qwen_agent_mvp/main.py file and ensure all imports are available. Install required packages: rich (for terminal UI), asyncio (built-in), sys (built-in). Verify the project structure matches the import paths used in the code.
+
+## 2. Implement CLI class initialization and agent setup [done]
+### Dependencies: 7.1
+### Description: Implement the CLI class constructor and the initialize() method that sets up the DeepSeek client and QwenAgentMVP instance
+### Details:
+Create the CLI class with __init__ method to initialize agent and conversation_history. Implement the initialize() async method that creates DeepSeekClient with API credentials from settings, instantiates QwenAgentMVP, and connects to MCP server. Add proper error handling and status updates using rich.console.
+<info added on 2025-06-14T11:40:39.066Z>
+Fixed ConfigManager initialization issue in AgentFactory. The ConfigManager constructor expects an env_file path parameter but was incorrectly passed a ConfigLoader object. Corrected to pass config_path parameter directly. Also removed erroneous await call since the initialize method is synchronous.
+</info added on 2025-06-14T11:40:39.066Z>
+<info added on 2025-06-14T12:11:43.650Z>
+Fixed multiple initialization issues:
+1. ConfigManager initialization method error - corrected
+2. DeepSeekLLMAdapter missing abstract method implementations - added _chat_no_stream, _chat_stream, _chat_with_functions methods
+3. HttpUrl type handling issue - fixed HTTP client to support HttpUrl type
+4. MCP client HttpUrl conversion - corrected
+5. Memory manager initialization failure handling - added error handling to allow skipping when API key is missing
+6. Currently encountering Qwen-Agent's Agent class abstract method _run not implemented issue, needs resolution
+</info added on 2025-06-14T12:11:43.650Z>
+<info added on 2025-06-14T13:55:29.724Z>
+Discovered and resolved core issues with Qwen-Agent usage:
+1. Successfully switched to Assistant class ✅
+2. Fixed DeepSeekConfig's model_name attribute reference ✅
+3. Identified root cause: Type mismatch between response and output in Qwen-Agent's internal fncall_agent.py
+4. Issue stems from LLM response format not matching Qwen-Agent's expected format
+5. Need to fix _convert_response method to ensure correct message format is returned
+</info added on 2025-06-14T13:55:29.724Z>
+
+## 3. Build main conversation loop and user input handling [done]
+### Dependencies: 7.2
+### Description: Implement the run() method with the main conversation loop, including user input collection and special command handling
+### Details:
+Implement the run() async method with a while loop for continuous interaction. Use rich.prompt.Prompt for user input. Handle special commands: exit/quit/q (terminate), help (show help), clear (clear screen), history (show conversation). Process regular messages through agent.process_message() with loading indicator. Store exchanges in conversation_history.
+<info added on 2025-06-14T13:13:16.402Z>
+Fixed Agent usage according to Qwen-Agent official documentation:
+1. Changed from BasicAgent to Assistant class
+2. Corrected the run method invocation
+3. Currently addressing new issues:
+   - asyncio.run() error when called within event loop
+   - Agent response format handling
+   - LLM adapter async method invocation issues
+4. Progressively fixing these issues
+</info added on 2025-06-14T13:13:16.402Z>
+<info added on 2025-06-14T16:03:58.371Z>
+Successfully created minimal demo to verify core functionality with Qwen-Agent official documentation.
+
+Key findings:
+1. ✅ Minimal demo runs successfully, validated Qwen-Agent + DeepSeek integration
+2. ✅ Tool registration mechanism (@register_tool) works correctly
+3. ✅ Streaming output (typewriter_print) performs well
+4. ❌ Our implementation is overly complex, deviating from official simple design
+
+Simplification recommendations:
+- Use Assistant class directly without complex adapters
+- Register tools directly with @register_tool, no complex MCP adaptation needed
+- Maintain simple CLI dialogue loop
+- Memory management should be a tool rather than core component
+
+Reference files:
+- demo_qwen_agent.py: Minimal verification demo
+- qwen_agent_basic.py: Basic functionality demo
+- qwen_agent_simplified.py: Simplified version with memory integration (has bugs to fix)
+
+Next step: Build CLI functionality based on qwen_agent_basic.py instead of fixing the complex existing implementation.
+</info added on 2025-06-14T16:03:58.371Z>
+
+## 4. Create helper methods for displaying information [done]
+### Dependencies: 7.3
+### Description: Implement show_help() and show_history() methods to display help information and conversation history
+### Details:
+Implement show_help() to display available commands and example questions using rich.panel and markdown. Implement show_history() to iterate through conversation_history and display past exchanges with proper formatting. Use rich styling for better visual presentation.
+
+## 5. Implement main entry point and error handling [done]
+### Dependencies: 7.4
+### Description: Create the main() async function and the script entry point with proper error handling and graceful shutdown
+### Details:
+Implement main() async function that creates CLI instance, calls initialize(), and runs the conversation loop. Add if __name__ == '__main__' block with asyncio.run(main()). Wrap in try-except to handle KeyboardInterrupt gracefully. Ensure proper cleanup and exit messages.
+

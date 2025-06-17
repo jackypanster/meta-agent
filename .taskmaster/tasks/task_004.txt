@@ -1,0 +1,103 @@
+# Task ID: 4
+# Title: Implement MCP SSE Client for Tool Integration
+# Status: done
+# Dependencies: 2
+# Priority: high
+# Description: Create an SSE client to connect with Context7 MCP Server and handle real-time tool invocations using Server-Sent Events protocol
+# Details:
+Create src/qwen_agent_mvp/tools/mcp_client.py:
+```python
+import asyncio
+import json
+import aiohttp
+from typing import Dict, Any, Optional, Callable
+from sseclient import SSEClient
+import httpx
+
+class MCPSSEClient:
+    def __init__(self, server_url: str):
+        self.server_url = server_url
+        self.session = None
+        self.available_tools = {}
+    
+    async def connect(self):
+        """Establish SSE connection and discover available tools"""
+        async with aiohttp.ClientSession() as session:
+            # Send discovery request
+            discovery_url = self.server_url.replace('/sse', '/discover')
+            async with session.get(discovery_url) as response:
+                if response.status == 200:
+                    self.available_tools = await response.json()
+    
+    async def invoke_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Invoke a tool through SSE connection"""
+        async with aiohttp.ClientSession() as session:
+            # Prepare request
+            request_data = {
+                "jsonrpc": "2.0",
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": parameters
+                },
+                "id": 1
+            }
+            
+            # Send request and handle SSE response
+            async with session.post(
+                self.server_url,
+                json=request_data,
+                headers={'Accept': 'text/event-stream'}
+            ) as response:
+                result = None
+                async for line in response.content:
+                    decoded_line = line.decode('utf-8').strip()
+                    if decoded_line.startswith('data: '):
+                        data = json.loads(decoded_line[6:])
+                        if 'result' in data:
+                            result = data['result']
+                            break
+                        elif 'error' in data:
+                            raise Exception(f"Tool error: {data['error']}")
+                
+                return result
+    
+    def get_available_tools(self) -> Dict[str, Any]:
+        """Return list of available tools and their schemas"""
+        return self.available_tools
+```
+
+# Test Strategy:
+1) Test SSE connection establishment, 2) Mock Context7 server responses for tool discovery, 3) Test successful tool invocation with various parameters, 4) Test error handling for connection failures and tool errors, 5) Verify SSE event parsing
+
+# Subtasks:
+## 1. 创建MCP协议数据模型 [done]
+### Dependencies: None
+### Description: 定义MCP JSON-RPC协议的请求和响应数据结构
+### Details:
+在src/tools/models.py中创建MCPRequest、MCPResponse、ToolCall、ToolResult等Pydantic模型，定义JSON-RPC 2.0协议格式，支持工具调用和SSE事件，文件不超过120行
+
+## 2. 创建SSE事件解析器 [done]
+### Dependencies: 4.1
+### Description: 实现Server-Sent Events协议的事件解析和处理
+### Details:
+在src/tools/sse_parser.py中创建SSEParser类，解析SSE事件流，处理data:、id:、event:等字段，支持JSON数据解析和错误处理，文件不超过120行
+
+## 3. 创建MCP客户端核心 [done]
+### Dependencies: 4.2
+### Description: 实现MCP服务器连接和工具发现的核心客户端
+### Details:
+在src/tools/mcp_client.py中创建MCPClient类，建立与Context7服务器的连接，实现工具发现和JSON-RPC通信，使用配置管理器获取服务器URL，文件不超过120行
+
+## 4. 实现工具调用管理器 [done]
+### Dependencies: 4.3
+### Description: 创建工具调用的执行、结果处理和错误管理
+### Details:
+在src/tools/tool_manager.py中创建ToolManager类，管理可用工具列表，执行工具调用，处理异步响应和错误重试，与SSE客户端集成，文件不超过120行
+
+## 5. 创建MCP工具集成测试 [done]
+### Dependencies: 4.4
+### Description: 为MCP客户端和工具调用创建全面的测试套件
+### Details:
+创建tests/unit/test_tools.py，测试SSE解析、MCP客户端连接、工具发现、工具调用和错误处理，模拟Context7服务器响应，确保集成功能正常
+

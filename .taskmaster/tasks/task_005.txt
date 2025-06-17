@@ -1,0 +1,110 @@
+# Task ID: 5
+# Title: Integrate mem0 Memory Management
+# Status: done
+# Dependencies: 2
+# Priority: medium
+# Description: Implement memory storage and retrieval functionality using mem0 library to enable the agent to remember conversation context and user information
+# Details:
+Create src/qwen_agent_mvp/memory/memory_manager.py:
+```python
+from mem0 import Memory
+from typing import Dict, Any, List, Optional
+import json
+
+class MemoryManager:
+    def __init__(self, user_id: str = "default_user"):
+        # Initialize mem0 with local storage
+        self.memory = Memory()
+        self.user_id = user_id
+        
+    async def add_memory(self, content: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+        """Store a new memory"""
+        result = self.memory.add(
+            messages=content,
+            user_id=self.user_id,
+            metadata=metadata or {}
+        )
+        return result['id'] if result else None
+    
+    async def search_memories(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Search for relevant memories based on query"""
+        results = self.memory.search(
+            query=query,
+            user_id=self.user_id,
+            limit=limit
+        )
+        return results
+    
+    async def get_all_memories(self) -> List[Dict[str, Any]]:
+        """Retrieve all memories for the user"""
+        return self.memory.get_all(user_id=self.user_id)
+    
+    async def update_memory(self, memory_id: str, content: str) -> bool:
+        """Update an existing memory"""
+        try:
+            self.memory.update(
+                memory_id=memory_id,
+                data=content
+            )
+            return True
+        except Exception:
+            return False
+    
+    async def delete_memory(self, memory_id: str) -> bool:
+        """Delete a specific memory"""
+        try:
+            self.memory.delete(memory_id=memory_id)
+            return True
+        except Exception:
+            return False
+    
+    def extract_facts_from_conversation(self, message: str) -> List[str]:
+        """Extract factual information from user messages"""
+        # Simple extraction logic - can be enhanced with NLP
+        facts = []
+        
+        # Pattern matching for common facts
+        if "我叫" in message or "my name is" in message.lower():
+            facts.append(message)
+        if "我的" in message or "my" in message.lower():
+            facts.append(message)
+        if "喜欢" in message or "like" in message.lower():
+            facts.append(message)
+        
+        return facts
+```
+
+# Test Strategy:
+1) Test memory storage and retrieval operations, 2) Verify search functionality returns relevant results, 3) Test memory persistence across sessions, 4) Test fact extraction from various conversation patterns, 5) Verify memory updates and deletions work correctly
+
+# Subtasks:
+## 1. 创建内存数据模型 [done]
+### Dependencies: None
+### Description: 定义内存存储和检索的数据结构模型
+### Details:
+在src/memory/models.py中创建Memory、MemoryEntry、SearchResult等Pydantic模型，定义内存元数据结构、搜索查询和结果格式，文件不超过120行
+
+## 2. 创建Mem0客户端封装 [done]
+### Dependencies: 5.1
+### Description: 实现对mem0 API的封装和配置管理
+### Details:
+在src/memory/mem0_client.py中创建Mem0Client类，封装mem0 API调用，支持配置管理器集成，处理API认证和错误管理，文件不超过120行
+
+## 3. 实现内存管理器核心 [done]
+### Dependencies: 5.2
+### Description: 创建内存存储、检索和事实提取的核心功能
+### Details:
+在src/memory/manager.py中创建MemoryManager类，实现内存的增删改查、智能搜索和对话事实提取功能，与Mem0客户端集成，文件不超过120行
+
+## 4. 创建内存服务接口 [done]
+### Dependencies: 5.3
+### Description: 实现高级内存服务API和会话集成
+### Details:
+在src/memory/service.py中创建MemoryService类，提供高级API接口，支持会话上下文管理、自动事实提取和相关性搜索，文件不超过120行
+
+## 5. 创建内存管理测试 [done]
+### Dependencies: 5.4
+### Description: 为内存管理功能创建全面的测试套件
+### Details:
+创建tests/unit/test_memory.py，测试内存存储、检索、搜索、事实提取和会话管理功能，模拟mem0 API响应，确保所有功能正常工作
+

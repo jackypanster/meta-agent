@@ -1,0 +1,75 @@
+# Task ID: 2
+# Title: Implement Configuration Management Module
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Create a configuration module to handle environment variables and application settings, ensuring all API keys and URLs are properly loaded from environment
+# Details:
+Create src/qwen_agent_mvp/config/settings.py:
+```python
+import os
+from dataclasses import dataclass
+from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
+
+@dataclass
+class Settings:
+    deepseek_api_key: str
+    mcp_server_url: str
+    deepseek_base_url: str = "https://api.deepseek.com"
+    model_name: str = "deepseek-chat"
+    max_retries: int = 3
+    timeout: int = 30
+    
+    @classmethod
+    def from_env(cls) -> 'Settings':
+        deepseek_key = os.getenv('DEEPSEEK_API_KEY')
+        if not deepseek_key:
+            raise ValueError("DEEPSEEK_API_KEY environment variable is required")
+        
+        mcp_url = os.getenv('MCP_SERVER_URL', 'https://mcp.context7.com/sse')
+        
+        return cls(
+            deepseek_api_key=deepseek_key,
+            mcp_server_url=mcp_url
+        )
+
+settings = Settings.from_env()
+```
+
+# Test Strategy:
+1) Test loading valid environment variables, 2) Test error handling when required variables are missing, 3) Test default values are applied correctly, 4) Verify settings can be accessed throughout the application
+
+# Subtasks:
+## 1. 创建配置数据模型 [done]
+### Dependencies: None
+### Description: 创建Pydantic配置数据模型，定义所有应用配置项的类型和验证规则
+### Details:
+在src/config/models.py中创建Settings数据类，包含DeepSeek API配置、MCP服务器配置等，使用Pydantic进行数据验证，文件不超过100行
+
+## 2. 创建环境变量加载器 [done]
+### Dependencies: 2.1
+### Description: 创建专门的环境变量加载和解析模块
+### Details:
+在src/config/loader.py中创建EnvironmentLoader类，负责从.env文件加载环境变量，处理默认值和类型转换，文件不超过100行
+
+## 3. 创建配置验证器 [done]
+### Dependencies: 2.1
+### Description: 创建配置验证和错误处理模块
+### Details:
+在src/config/validator.py中创建ConfigValidator类，验证API密钥格式、URL有效性等，提供友好的错误信息，文件不超过100行
+
+## 4. 创建配置管理器 [done]
+### Dependencies: 2.2, 2.3
+### Description: 创建统一的配置管理接口
+### Details:
+在src/config/manager.py中创建ConfigManager类，整合加载器和验证器，提供全局配置访问接口，支持配置热重载，文件不超过100行
+
+## 5. 创建配置模块测试 [done]
+### Dependencies: 2.4
+### Description: 为配置管理模块创建全面的单元测试
+### Details:
+创建tests/unit/test_config.py，测试各个配置组件的功能，包括错误处理、默认值、验证逻辑等，达到90%代码覆盖率
+

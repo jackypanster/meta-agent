@@ -1,0 +1,134 @@
+# Task ID: 6
+# Title: Build Qwen-Agent Core Integration
+# Status: done
+# Dependencies: 3, 4, 5
+# Priority: high
+# Description: Implement the core agent logic using Qwen-Agent framework, integrating LLM, tools, and memory components into a cohesive conversational agent
+# Details:
+Create src/qwen_agent_mvp/agent/core_agent.py:
+```python
+from qwen_agent import Agent, Tool
+from qwen_agent.llm import BaseChatModel
+from typing import List, Dict, Any, Optional
+import asyncio
+from ..tools.mcp_client import MCPSSEClient
+from ..memory.memory_manager import MemoryManager
+from .llm_client import DeepSeekClient, Message
+
+class DeepSeekLLM(BaseChatModel):
+    """Adapter to make DeepSeek compatible with Qwen-Agent"""
+    def __init__(self, client: DeepSeekClient):
+        self.client = client
+        super().__init__(cfg={})
+    
+    def chat(self, messages: List[Dict[str, str]], **kwargs) -> List[Dict[str, str]]:
+        # Convert to DeepSeek format and call API
+        ds_messages = [Message(role=m['role'], content=m['content']) for m in messages]
+        response = asyncio.run(self.client.chat_completion(ds_messages))
+        return [{'role': 'assistant', 'content': response}]
+
+class MCPTool(Tool):
+    """Wrapper for MCP tools to work with Qwen-Agent"""
+    def __init__(self, name: str, description: str, mcp_client: MCPSSEClient):
+        self.tool_name = name
+        self.mcp_client = mcp_client
+        super().__init__(cfg={'name': name, 'description': description})
+    
+    def call(self, params: str, **kwargs) -> str:
+        # Parse params and invoke MCP tool
+        import json
+        parameters = json.loads(params) if isinstance(params, str) else params
+        result = asyncio.run(self.mcp_client.invoke_tool(self.tool_name, parameters))
+        return json.dumps(result)
+
+class QwenAgentMVP:
+    def __init__(self, deepseek_client: DeepSeekClient, mcp_url: str):
+        self.llm = DeepSeekLLM(deepseek_client)
+        self.mcp_client = MCPSSEClient(mcp_url)
+        self.memory_manager = MemoryManager()
+        self.tools = []
+        self.agent = None
+        
+    async def initialize(self):
+        """Initialize MCP connection and discover tools"""
+        await self.mcp_client.connect()
+        
+        # Create tool wrappers for discovered tools
+        for tool_name, tool_info in self.mcp_client.get_available_tools().items():
+            tool = MCPTool(
+                name=tool_name,
+                description=tool_info.get('description', ''),
+                mcp_client=self.mcp_client
+            )
+            self.tools.append(tool)
+        
+        # Initialize Qwen-Agent
+        self.agent = Agent(
+            llm=self.llm,
+            tools=self.tools,
+            name="Assistant",
+            description="A helpful AI assistant with memory and tool capabilities"
+        )
+    
+    async def process_message(self, user_input: str) -> str:
+        """Process user input and generate response"""
+        # Extract and store facts from user input
+        facts = self.memory_manager.extract_facts_from_conversation(user_input)
+        for fact in facts:
+            await self.memory_manager.add_memory(fact)
+        
+        # Search relevant memories
+        memories = await self.memory_manager.search_memories(user_input, limit=3)
+        
+        # Prepare context with memories
+        context = "\n".join([f"- {mem['text']}" for mem in memories]) if memories else ""
+        
+        # Prepare messages for agent
+        messages = []
+        if context:
+            messages.append({
+                'role': 'system',
+                'content': f'Previous context:\n{context}'
+            })
+        messages.append({'role': 'user', 'content': user_input})
+        
+        # Get response from agent
+        response = self.agent.run(messages=messages)
+        
+        return response[-1]['content'] if response else "Sorry, I couldn't process that."
+```
+
+# Test Strategy:
+1) Test agent initialization with all components, 2) Verify message processing flow from input to response, 3) Test tool invocation through agent, 4) Test memory integration in conversations, 5) Verify multi-turn dialogue capabilities
+
+# Subtasks:
+## 1. 创建Qwen-Agent LLM适配器 [done]
+### Dependencies: None
+### Description: 实现DeepSeek LLM到Qwen-Agent BaseChatModel的适配器
+### Details:
+创建DeepSeekLLM类，继承BaseChatModel，将DeepSeek客户端包装为Qwen-Agent兼容的接口
+
+## 2. 创建MCP工具适配器 [done]
+### Dependencies: 6.1
+### Description: 实现MCP工具到Qwen-Agent Tool的适配器
+### Details:
+创建MCPTool类，继承Qwen-Agent Tool，包装MCP客户端的工具调用功能
+
+## 3. 实现核心Agent类 [done]
+### Dependencies: 6.1, 6.2
+### Description: 创建QwenAgentMVP核心类，集成LLM、工具和内存
+### Details:
+实现主要的Agent逻辑，包括初始化、消息处理、工具发现和内存集成
+
+## 4. 创建Agent工厂和配置 [done]
+### Dependencies: 6.3
+### Description: 实现Agent工厂模式和配置管理集成
+### Details:
+创建AgentFactory类，使用ConfigManager进行配置，提供简洁的Agent创建接口
+
+## 5. 创建Agent集成测试 [done]
+### Dependencies: 6.4
+### Description: 创建完整的Agent集成测试套件
+### Details:
+测试Agent初始化、消息处理、工具调用、内存集成和多轮对话功能
+

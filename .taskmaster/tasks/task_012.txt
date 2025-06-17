@@ -1,0 +1,153 @@
+# Task ID: 12
+# Title: Clean Up MCP Tool Configuration
+# Status: done
+# Dependencies: 11
+# Priority: medium
+# Description: Remove non-standard MCP tools from the configuration and retain only the three official standard MCP servers: time, fetch, and memory.
+# Details:
+Perform cleanup of MCP tool configuration to align with official standards:
+
+1. **Identify Current MCP Tools**:
+   - Review `src/qwen_agent_mvp/config/settings.py` and any MCP-related configuration files
+   - List all currently configured MCP tools/servers
+   - Identify which tools are non-standard (not time, fetch, or memory)
+
+2. **Update Configuration Files**:
+   - Modify `src/qwen_agent_mvp/config/settings.py`:
+   ```python
+   # Remove non-standard MCP configurations
+   MCP_SERVERS = {
+       "time": {
+           "command": "npx",
+           "args": ["-y", "@modelcontextprotocol/server-time"],
+           "description": "Get current time and date"
+       },
+       "fetch": {
+           "command": "npx", 
+           "args": ["-y", "@modelcontextprotocol/server-fetch"],
+           "description": "Fetch data from URLs"
+       },
+       "memory": {
+           "command": "npx",
+           "args": ["-y", "@modelcontextprotocol/server-memory"],
+           "description": "Store and retrieve memories"
+       }
+   }
+   ```
+
+3. **Update Tool Registry**:
+   - Modify any tool registration logic in `src/qwen_agent_mvp/tools/`
+   - Remove references to non-standard MCP tools
+   - Update tool initialization to only load the three standard servers
+
+4. **Clean Up Tool Implementations**:
+   - Remove any custom MCP tool implementations that are not part of the standard set
+   - Delete associated test files for removed tools
+   - Update imports and dependencies
+
+5. **Update Documentation**:
+   - Update README.md to reflect only standard MCP tools
+   - Update any inline documentation or docstrings
+   - Remove examples that use non-standard tools
+
+6. **Verify Integration Points**:
+   - Check `src/qwen_agent_mvp/agent/core_agent.py` for hardcoded tool references
+   - Update tool invocation logic if needed
+   - Ensure error handling still works with reduced tool set
+
+# Test Strategy:
+1) Verify configuration only contains time, fetch, and memory MCP servers, 2) Test that removed tools are no longer accessible via the agent, 3) Confirm the three standard tools still function correctly, 4) Run existing integration tests to ensure no breaking changes, 5) Manually test each standard tool through the CLI interface, 6) Check that documentation accurately reflects available tools
+
+# Subtasks:
+## 1. Audit Current MCP Tool Configuration [done]
+### Dependencies: None
+### Description: Identify and document all currently configured MCP tools/servers in the codebase
+### Details:
+Review src/qwen_agent_mvp/config/settings.py and any other configuration files (e.g., .env, config.json) to create a comprehensive list of all MCP tools currently configured. Document which tools are non-standard (not time, fetch, or memory) and their usage locations throughout the codebase.
+<info added on 2025-06-15T10:19:52.732Z>
+完成MCP工具配置审计，发现以下情况：
+
+**当前MCP配置位置：**
+1. `src/main.py` 第142-153行：包含官方标准的3个MCP服务器配置
+   - time: uvx mcp-server-time --local-timezone=Asia/Shanghai
+   - fetch: uvx mcp-server-fetch  
+   - memory: npx @modelcontextprotocol/server-memory
+
+**需要清理的文件：**
+1. `tests/unit/test_mcp_tools.py` - 包含已删除的自定义MCP工具测试
+2. `docs/MCP_INTEGRATION_GUIDE.md` - 旧的MCP集成文档
+3. `src/tools/__init__.py` - 包含过时的MCP工具描述
+
+**已经正确的部分：**
+- `src/config/settings.py` - 没有MCP相关配置，符合预期
+- `src/tools/qwen_tools/__init__.py` - 已正确移除MCP工具导入
+- `src/main.py` - MCP配置已经是标准的3个服务器
+
+**结论：**
+当前配置基本正确，只需要清理测试文件和过时文档。
+</info added on 2025-06-15T10:19:52.732Z>
+
+## 2. Update MCP Configuration in settings.py [done]
+### Dependencies: 12.1
+### Description: Modify the main configuration file to retain only the three standard MCP servers
+### Details:
+Update src/qwen_agent_mvp/config/settings.py to define MCP_SERVERS dictionary with only time, fetch, and memory servers. Ensure proper command and args structure for npx execution. Remove any non-standard server configurations, environment variables, or related settings.
+
+## 3. Clean Up Tool Registry and Initialization [done]
+### Dependencies: 12.2
+### Description: Update tool registration logic to only load standard MCP servers
+### Details:
+Modify tool registration logic in src/qwen_agent_mvp/tools/ directory. Update __init__.py and any tool factory/registry classes to remove references to non-standard MCP tools. Ensure tool initialization code only attempts to load time, fetch, and memory servers.
+
+## 4. Remove Non-Standard Tool Implementations [done]
+### Dependencies: 12.3
+### Description: Delete custom MCP tool implementations and their associated files
+### Details:
+Remove any custom MCP tool implementation files that are not part of the standard set. Delete associated test files, utility functions, and helper classes. Update imports in remaining files to remove references to deleted modules.
+<info added on 2025-06-15T10:22:56.717Z>
+已完成非标准工具实现的清理：
+
+删除的文件：
+1. tests/unit/test_mcp_tools.py - 包含已删除的自定义MCP工具测试
+2. docs/MCP_INTEGRATION_GUIDE.md - 旧的MCP集成文档
+
+更新的文件：
+1. src/tools/__init__.py - 更新了模块描述，移除了Context7 MCP服务器的引用，说明MCP功能现在通过官方Qwen-Agent支持
+
+验证结果：
+- 所有非标准MCP工具实现已被移除
+- 保留了官方标准的time、fetch、memory三个MCP服务器配置
+- 没有破坏现有的导入结构
+</info added on 2025-06-15T10:22:56.717Z>
+
+## 5. Update Integration Points and Error Handling [done]
+### Dependencies: 12.4
+### Description: Verify and update all code that interacts with MCP tools
+### Details:
+Review src/qwen_agent_mvp/agent/core_agent.py and other modules for hardcoded tool references. Update tool invocation logic to handle only standard tools. Ensure error handling gracefully manages cases where previously available tools are now missing.
+
+## 6. Update Documentation and Examples [done]
+### Dependencies: 12.5
+### Description: Revise all documentation to reflect the standard MCP tool set
+### Details:
+Update README.md to list only time, fetch, and memory as available MCP tools. Revise inline documentation, docstrings, and code comments. Remove or update any examples, tutorials, or sample code that reference non-standard tools. Update API documentation if applicable.
+<info added on 2025-06-15T10:31:38.786Z>
+已完成文档更新，移除了所有非标准MCP工具的引用：
+
+**更新的文档：**
+1. `docs/MCP_OFFICIAL_INTEGRATION.md` - 强调只使用官方标准的三个MCP服务器，添加了使用场景说明
+2. `README.md` - 全面更新，移除了Context7 MCP Server的所有引用，改为官方MCP服务器
+
+**主要更改：**
+- 项目描述：从"Context7 MCP Server"改为"official MCP servers (time/fetch/memory)"
+- 功能描述：强调使用官方MCP协议
+- 配置说明：移除MCP_SERVER_URL配置，说明通过Qwen-Agent自动配置
+- 工具集成：从"Context7 MCP tools"改为"official MCP servers"
+- 外部链接：从Context7链接改为官方MCP协议文档
+
+**验证结果：**
+- 所有文档现在只反映标准的time、fetch、memory三个MCP服务器
+- 移除了所有非标准MCP工具的引用
+- 文档与实际代码配置保持一致
+</info added on 2025-06-15T10:31:38.786Z>
+

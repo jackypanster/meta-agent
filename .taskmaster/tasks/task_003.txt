@@ -1,0 +1,96 @@
+# Task ID: 3
+# Title: Integrate DeepSeek LLM API
+# Status: done
+# Dependencies: 2
+# Priority: high
+# Description: Implement the LLM integration layer to connect with DeepSeek V2 API for natural language understanding and response generation
+# Details:
+Create src/qwen_agent_mvp/agent/llm_client.py:
+```python
+import httpx
+import json
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass
+
+@dataclass
+class Message:
+    role: str  # 'user', 'assistant', 'system'
+    content: str
+
+class DeepSeekClient:
+    def __init__(self, api_key: str, base_url: str = "https://api.deepseek.com"):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+    
+    async def chat_completion(self, 
+                            messages: List[Message], 
+                            model: str = "deepseek-chat",
+                            temperature: float = 0.7,
+                            max_tokens: int = 2000) -> str:
+        async with httpx.AsyncClient() as client:
+            payload = {
+                "model": model,
+                "messages": [{"role": m.role, "content": m.content} for m in messages],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": False
+            }
+            
+            response = await client.post(
+                f"{self.base_url}/v1/chat/completions",
+                headers=self.headers,
+                json=payload,
+                timeout=30.0
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"DeepSeek API error: {response.text}")
+            
+            result = response.json()
+            return result['choices'][0]['message']['content']
+    
+    async def function_calling(self, 
+                             messages: List[Message],
+                             functions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        # Implementation for function calling support
+        pass
+```
+
+# Test Strategy:
+1) Mock DeepSeek API responses and test successful chat completions, 2) Test error handling for API failures, 3) Test timeout scenarios, 4) Verify message formatting is correct, 5) Test function calling capabilities
+
+# Subtasks:
+## 1. 创建消息数据模型 [done]
+### Dependencies: None
+### Description: 创建LLM交互的消息和响应数据模型
+### Details:
+在src/agent/models.py中创建Message、ChatResponse等Pydantic数据模型，定义LLM API交互的数据结构，支持不同角色和消息类型，文件不超过100行
+
+## 2. 创建HTTP客户端基础类 [done]
+### Dependencies: 3.1
+### Description: 创建异步HTTP客户端基础类，处理请求和响应
+### Details:
+在src/agent/http_client.py中创建AsyncHttpClient类，封装httpx客户端，处理超时、重试、错误处理等通用HTTP功能，文件不超过100行
+
+## 3. 创建DeepSeek LLM客户端 [done]
+### Dependencies: 3.2
+### Description: 实现DeepSeek API的专用客户端类
+### Details:
+在src/agent/deepseek_client.py中创建DeepSeekClient类，继承HTTP基础类，实现chat_completion、stream_completion等DeepSeek特定功能，使用配置管理器获取API密钥，文件不超过100行
+
+## 4. 实现Function Calling支持 [done]
+### Dependencies: 3.3
+### Description: 为DeepSeek客户端添加Function Calling功能
+### Details:
+在src/agent/function_calling.py中创建FunctionCallHandler类，处理函数调用的注册、验证和执行，支持DeepSeek的Function Calling格式，文件不超过100行
+
+## 5. 创建LLM集成测试 [done]
+### Dependencies: 3.4
+### Description: 为LLM客户端创建全面的单元测试和集成测试
+### Details:
+创建tests/unit/test_agent.py，测试消息模型、HTTP客户端、DeepSeek客户端和Function Calling功能，包括成功场景、错误处理、超时等，达到90%代码覆盖率
+

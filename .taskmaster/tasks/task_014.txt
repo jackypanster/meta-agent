@@ -1,0 +1,152 @@
+# Task ID: 14
+# Title: Separate System Prompts to External Configuration Files
+# Status: done
+# Dependencies: 13
+# Priority: high
+# Description: Extract hardcoded system prompts from main.py into external configuration files and implement a prompt management system for better maintainability and dynamic updates.
+# Details:
+Implement a comprehensive prompt management system by separating system prompts from code:
+
+1. **Create Prompt Configuration Structure**:
+   - Create `config/prompts/` directory with organized prompt files:
+   ```
+   config/prompts/
+   ├── system_prompts.json
+   ├── templates/
+   │   ├── conversation.json
+   │   ├── tool_calling.json
+   │   └── error_handling.json
+   └── locales/
+       ├── en/
+       └── zh/
+   ```
+
+2. **Design Prompt Configuration Schema**:
+   - Create `config/prompts/system_prompts.json`:
+   ```json
+   {
+     "version": "1.0",
+     "default_locale": "en",
+     "prompts": {
+       "system_base": {
+         "content": "You are a helpful AI assistant...",
+         "variables": ["user_name", "context"],
+         "description": "Base system prompt for general conversations"
+       },
+       "tool_calling": {
+         "content": "You have access to tools. When using tools...",
+         "variables": ["available_tools"],
+         "description": "Prompt for tool calling scenarios"
+       },
+       "memory_context": {
+         "content": "Based on our previous conversations...",
+         "variables": ["memory_summary"],
+         "description": "Prompt for incorporating memory context"
+       }
+     }
+   }
+   ```
+
+3. **Implement Prompt Manager Class**:
+   - Create `src/qwen_agent_mvp/config/prompt_manager.py`:
+   ```python
+   import json
+   from pathlib import Path
+   from typing import Dict, Optional, Any
+   from string import Template
+
+   class PromptManager:
+       def __init__(self, config_dir: str = "config/prompts"):
+           self.config_dir = Path(config_dir)
+           self.prompts = {}
+           self.templates = {}
+           self.load_prompts()
+       
+       def load_prompts(self):
+           """Load all prompt configurations"""
+           config_file = self.config_dir / "system_prompts.json"
+           with open(config_file, 'r', encoding='utf-8') as f:
+               self.config = json.load(f)
+           self.prompts = self.config.get('prompts', {})
+       
+       def get_prompt(self, prompt_key: str, variables: Dict[str, Any] = None) -> str:
+           """Get formatted prompt with variable substitution"""
+           if prompt_key not in self.prompts:
+               raise ValueError(f"Prompt '{prompt_key}' not found")
+           
+           prompt_config = self.prompts[prompt_key]
+           content = prompt_config['content']
+           
+           if variables:
+               template = Template(content)
+               return template.safe_substitute(variables)
+           return content
+       
+       def reload_prompts(self):
+           """Hot reload prompts from configuration files"""
+           self.load_prompts()
+   ```
+
+4. **Update Main Application**:
+   - Modify `main.py` to use PromptManager:
+   ```python
+   from qwen_agent_mvp.config.prompt_manager import PromptManager
+   
+   # Replace hardcoded prompts
+   prompt_manager = PromptManager()
+   system_prompt = prompt_manager.get_prompt('system_base', {
+       'user_name': user_name,
+       'context': current_context
+   })
+   ```
+
+5. **Extract Existing Prompts**:
+   - Identify all hardcoded prompts in main.py and other modules
+   - Categorize prompts by function (system, tool calling, error handling)
+   - Move prompts to appropriate configuration files
+   - Replace hardcoded strings with prompt_manager calls
+
+6. **Add Prompt Validation**:
+   - Implement schema validation for prompt configuration files
+   - Add checks for required variables in prompts
+   - Validate prompt syntax and formatting
+
+7. **Support Internationalization**:
+   - Create locale-specific prompt directories
+   - Implement locale selection based on user preference
+   - Add fallback mechanism to default locale
+
+# Test Strategy:
+1) Verify all hardcoded prompts are successfully extracted from main.py and other source files, 2) Test PromptManager can load and parse configuration files correctly, 3) Validate prompt variable substitution works with various input combinations, 4) Test hot reload functionality by modifying prompt files during runtime, 5) Verify error handling for missing prompts and malformed configuration files, 6) Test that the application still functions identically with externalized prompts, 7) Validate prompt schema validation catches configuration errors, 8) Test locale support and fallback mechanisms, 9) Run integration tests to ensure prompt changes don't break existing functionality, 10) Verify performance impact is minimal when loading prompts
+
+# Subtasks:
+## 1. Create Prompt Configuration Directory Structure and Schema [done]
+### Dependencies: None
+### Description: Establish the foundational directory structure for prompt management and create the JSON schema for system prompts configuration.
+### Details:
+Create the complete directory structure: config/prompts/ with subdirectories for system_prompts.json, templates/, and locales/. Design and implement the JSON schema for system_prompts.json with version control, prompt definitions, variable placeholders, and metadata. Include validation rules for prompt structure, required fields, and variable syntax. Create initial template files for conversation.json, tool_calling.json, and error_handling.json in the templates directory.
+
+## 2. Implement Core PromptManager Class [done]
+### Dependencies: 14.1
+### Description: Develop the central PromptManager class that handles loading, caching, and retrieving prompts with variable substitution capabilities.
+### Details:
+Create src/qwen_agent_mvp/config/prompt_manager.py with PromptManager class. Implement methods: __init__ for initialization, load_prompts() for reading configuration files, get_prompt() for retrieving and formatting prompts with variable substitution using Template class, reload_prompts() for hot reloading, and validate_prompt() for schema validation. Add error handling for missing prompts, invalid variables, and file I/O errors. Implement caching mechanism for performance optimization.
+
+## 3. Extract and Migrate Existing Hardcoded Prompts [done]
+### Dependencies: 14.2
+### Description: Identify all hardcoded system prompts in the codebase and migrate them to the new configuration system.
+### Details:
+Scan main.py and all modules to identify hardcoded prompt strings. Categorize prompts by function (system_base, tool_calling, memory_context, error_handling). Extract prompts to appropriate JSON configuration files with proper variable identification and metadata. Create mapping documentation showing old hardcoded locations to new configuration keys. Ensure all extracted prompts maintain their original functionality while supporting variable substitution.
+
+## 4. Update Application Code to Use PromptManager [done]
+### Dependencies: 14.3
+### Description: Modify main.py and related modules to integrate PromptManager and replace all hardcoded prompt references.
+### Details:
+Update main.py to import and initialize PromptManager. Replace all hardcoded prompt strings with prompt_manager.get_prompt() calls. Implement proper variable passing for dynamic content like user_name, context, and available_tools. Add error handling for prompt loading failures and fallback mechanisms. Update initialization sequence to ensure PromptManager is available throughout the application lifecycle. Maintain backward compatibility during transition period.
+
+## 5. Implement Internationalization Support and Validation [done]
+### Dependencies: 14.4
+### Description: Add multi-language support for prompts and implement comprehensive validation for prompt configurations.
+### Details:
+Create locale-specific directories (config/prompts/locales/en/, config/prompts/locales/zh/) with translated prompt files. Implement locale detection and selection logic in PromptManager. Add fallback mechanism to default locale when translations are missing. Implement comprehensive validation for prompt configuration files including JSON schema validation, variable consistency checks, and prompt syntax validation. Add configuration reload capabilities for dynamic updates without application restart.
+

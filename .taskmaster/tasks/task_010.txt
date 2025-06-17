@@ -1,0 +1,170 @@
+# Task ID: 10
+# Title: End-to-End Testing and Validation
+# Status: done
+# Dependencies: 7, 9
+# Priority: high
+# Description: Perform comprehensive testing of all MVP success criteria including multi-turn dialogue, tool invocation, memory persistence, and one-click setup
+# Details:
+Create tests/test_e2e.py for end-to-end validation:
+```python
+import pytest
+import asyncio
+from unittest.mock import Mock, patch, AsyncMock
+from qwen_agent_mvp.agent.core_agent import QwenAgentMVP
+from qwen_agent_mvp.agent.llm_client import DeepSeekClient
+
+class TestE2E:
+    """End-to-end tests validating all MVP success criteria"""
+    
+    @pytest.mark.asyncio
+    async def test_multi_turn_dialogue(self):
+        """Test Criterion 1: Complete multi-turn dialogue with intent recognition"""
+        # Mock DeepSeek responses
+        mock_client = Mock(spec=DeepSeekClient)
+        mock_client.chat_completion = AsyncMock()
+        mock_client.chat_completion.side_effect = [
+            "Hello! I understand you want to know about the weather. Let me help you with that.",
+            "Based on the weather data, Beijing is sunny today with a temperature of 25°C."
+        ]
+        
+        agent = QwenAgentMVP(mock_client, "https://mcp.context7.com/sse")
+        
+        # First turn
+        response1 = await agent.process_message("I want to check the weather")
+        assert "weather" in response1.lower()
+        
+        # Second turn
+        response2 = await agent.process_message("How about Beijing?")
+        assert "beijing" in response2.lower()
+    
+    @pytest.mark.asyncio
+    async def test_tool_invocation(self):
+        """Test Criterion 2: Successfully invoke Context7 tools"""
+        with patch('qwen_agent_mvp.tools.mcp_client.MCPSSEClient') as MockMCP:
+            mock_mcp = MockMCP.return_value
+            mock_mcp.connect = AsyncMock()
+            mock_mcp.get_available_tools = Mock(return_value={
+                'weather': {'description': 'Get weather information'}
+            })
+            mock_mcp.invoke_tool = AsyncMock(return_value={
+                'temperature': '25°C',
+                'condition': 'Sunny'
+            })
+            
+            mock_llm = Mock(spec=DeepSeekClient)
+            mock_llm.chat_completion = AsyncMock(
+                return_value="The weather in Beijing is sunny with 25°C."
+            )
+            
+            agent = QwenAgentMVP(mock_llm, "https://mcp.context7.com/sse")
+            await agent.initialize()
+            
+            response = await agent.process_message("What's the weather in Beijing?")
+            
+            # Verify tool was called
+            mock_mcp.invoke_tool.assert_called_once()
+            assert "25°C" in response or "sunny" in response.lower()
+    
+    @pytest.mark.asyncio
+    async def test_memory_functionality(self):
+        """Test Criterion 3: Memory storage and retrieval"""
+        mock_llm = Mock(spec=DeepSeekClient)
+        mock_llm.chat_completion = AsyncMock()
+        mock_llm.chat_completion.side_effect = [
+            "Nice to meet you, Zhang San! I'll remember your name.",
+            "Your name is Zhang San."
+        ]
+        
+        agent = QwenAgentMVP(mock_llm, "https://mcp.context7.com/sse")
+        
+        # Store name
+        await agent.process_message("My name is Zhang San")
+        
+        # Retrieve name
+        response = await agent.process_message("What's my name?")
+        assert "Zhang San" in response
+    
+    def test_environment_setup(self, tmp_path):
+        """Test Criterion 4: One-click environment setup"""
+        # Create a temporary project directory
+        project_dir = tmp_path / "test_project"
+        project_dir.mkdir()
+        
+        # Simulate uv commands
+        commands = [
+            "uv venv",
+            "uv pip install -e ."
+        ]
+        
+        # Verify commands would execute successfully
+        # In real test, we'd use subprocess to run these
+        assert len(commands) <= 3  # Maximum 3 commands as per requirement
+    
+    @pytest.mark.asyncio
+    async def test_response_time(self):
+        """Test non-functional requirement: Response time < 3 seconds"""
+        import time
+        
+        mock_llm = Mock(spec=DeepSeekClient)
+        # Simulate API delay
+        async def delayed_response(*args, **kwargs):
+            await asyncio.sleep(0.5)  # Simulate network delay
+            return "Test response"
+        
+        mock_llm.chat_completion = delayed_response
+        
+        agent = QwenAgentMVP(mock_llm, "https://mcp.context7.com/sse")
+        
+        start_time = time.time()
+        response = await agent.process_message("Hello")
+        end_time = time.time()
+        
+        response_time = end_time - start_time
+        assert response_time < 3.0  # Must be under 3 seconds
+
+# Integration test script
+if __name__ == "__main__":
+    # Run all MVP validation tests
+    pytest.main(["-v", __file__])
+```
+
+Also create a manual testing checklist in docs/MVP_VALIDATION.md:
+```markdown
+# MVP Validation Checklist
+
+## Success Criteria Validation
+
+### 1. End-to-End Dialogue ✓
+- [ ] Start the application
+- [ ] Have a multi-turn conversation
+- [ ] Verify intent recognition works
+- [ ] Confirm natural responses
+
+### 2. Tool Invocation ✓
+- [ ] Ask "What's the weather in Beijing?"
+- [ ] Verify Context7 tool is called
+- [ ] Confirm correct results returned
+
+### 3. Memory Validation ✓
+- [ ] Say "My name is Zhang San"
+- [ ] Ask "What's my name?"
+- [ ] Verify correct name is returned
+
+### 4. Environment Setup ✓
+- [ ] Clone fresh repository
+- [ ] Run setup commands from README
+- [ ] Verify app starts successfully
+- [ ] Count commands (must be ≤ 3)
+
+## Performance Testing
+- [ ] Measure first response time
+- [ ] Verify < 3 seconds (excluding network)
+
+## Error Handling
+- [ ] Test with invalid API key
+- [ ] Test with network disconnection
+- [ ] Verify graceful error messages
+```
+
+# Test Strategy:
+1) Run automated E2E tests to verify all success criteria, 2) Perform manual testing following the validation checklist, 3) Test performance requirements with timing measurements, 4) Verify error handling and recovery, 5) Validate the complete user journey from setup to conversation

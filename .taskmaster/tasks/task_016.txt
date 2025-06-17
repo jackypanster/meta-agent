@@ -1,0 +1,73 @@
+# Task ID: 16
+# Title: 项目全面清理和优化
+# Status: done
+# Dependencies: 15
+# Priority: high
+# Description: 经过多轮迭代开发，项目中积累了很多不再需要的文件、重复的目录结构、过时的文档和测试文件。需要进行全面的项目清理和优化，确保项目结构清晰、简洁、专业。
+# Details:
+项目已经完成所有核心功能开发，现在需要进行全面的项目清理和优化。经过多轮迭代开发，项目中积累了很多不再需要的文件、重复的目录结构、过时的文档和测试文件。
+
+需要彻底清理以下内容：
+1. 删除重复的文档目录（docs/ vs doc/）并合并内容
+2. 清理根目录下的临时文件和演示脚本（如test_mcp_watcher_demo.py、exception_audit_report.json等）
+3. 删除空的或不必要的目录结构（如workspace/tools/等）
+4. 清理不再使用的测试文件和配置文件
+5. 整理和优化项目结构，确保每个文件都有明确的用途
+6. 删除过时的文档和报告文件
+7. 清理__pycache__目录和其他临时文件
+8. 验证清理后的项目仍然能正常运行
+
+目标是让项目结构清晰、简洁、专业，只保留必要的文件，删除所有冗余内容。
+
+# Test Strategy:
+1) 验证清理后的项目目录结构清晰简洁，2) 确认所有保留的文件都有明确用途，3) 运行完整的测试套件确保功能正常，4) 验证应用程序能够正常启动和运行，5) 检查没有遗留的临时文件或空目录，6) 确认文档结构统一且内容准确
+
+# Subtasks:
+## 1. 合并重复的文档目录 [done]
+### Dependencies: None
+### Description: 删除重复的文档目录（docs/ vs doc/）并合并内容到统一的docs/目录
+### Details:
+检查docs/和doc/目录的内容，将doc/prd.md移动到docs/目录，删除空的doc/目录，确保所有文档都在docs/目录下统一管理
+
+## 2. 清理根目录临时文件 [done]
+### Dependencies: None
+### Description: 删除根目录下的临时文件和演示脚本
+### Details:
+删除以下文件：test_mcp_watcher_demo.py（演示脚本）、exception_audit_report.json（审计报告）、CLEANUP_REPORT.md（清理报告）、.vulture_whitelist.py（代码分析白名单）、.coverage（覆盖率文件）
+
+## 3. 删除空的目录结构 [done]
+### Dependencies: None
+### Description: 删除空的或不必要的目录结构
+### Details:
+删除workspace/目录及其子目录（workspace/tools/doc_parser/、workspace/tools/simple_doc_parser/），这些目录为空或包含过时内容，不再需要
+
+## 4. 清理Python缓存文件 [done]
+### Dependencies: None
+### Description: 删除所有__pycache__目录和.pyc文件
+### Details:
+递归删除项目中所有的__pycache__目录和.pyc文件，包括src/、tests/、scripts/等目录下的Python缓存文件
+
+## 5. 清理pytest和测试缓存 [done]
+### Dependencies: None
+### Description: 删除pytest缓存和测试相关的临时文件
+### Details:
+删除.pytest_cache/目录和其他测试相关的缓存文件，清理测试运行产生的临时数据
+
+## 6. 整理和验证项目结构 [done]
+### Dependencies: 16.1, 16.2, 16.3, 16.4, 16.5
+### Description: 检查并整理最终的项目结构，确保每个文件都有明确用途
+### Details:
+检查清理后的项目结构，确认所有保留的文件都有明确用途，删除任何遗漏的无用文件，整理目录结构使其更加清晰
+
+## 7. 更新.gitignore文件 [done]
+### Dependencies: 16.6
+### Description: 更新.gitignore文件以防止将来产生不必要的文件
+### Details:
+检查并更新.gitignore文件，确保包含所有应该忽略的文件类型和目录，防止将来再次产生临时文件和缓存文件
+
+## 8. 验证项目功能完整性 [done]
+### Dependencies: 16.7
+### Description: 运行完整测试确保清理后项目功能正常
+### Details:
+运行完整的测试套件，启动应用程序验证所有功能正常，确保清理过程没有影响项目的核心功能
+
