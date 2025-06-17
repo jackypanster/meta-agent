@@ -1,0 +1,71 @@
+{
+  "version": "1.0",
+  "description": "MCP服务器配置示例 - 包含SSE和Streamable HTTP协议支持",
+  "servers": {
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "enabled": true,
+      "description": "HTTP网页抓取服务，用于获取网页内容和实时信息",
+      "category": "network"
+    },
+    "k8s-mcp-sse": {
+      "type": "sse",
+      "config": {
+        "url": "http://ncpdev.gf.com.cn:31455/sse"
+      },
+      "enabled": false,
+      "description": "Kubernetes集群管理MCP服务 (SSE协议)",
+      "category": "kubernetes"
+    },
+    "k8s-mcp-http": {
+      "type": "streamable-http", 
+      "config": {
+        "url": "http://ncpdev.gf.com.cn:31455/mcp"
+      },
+      "enabled": false,
+      "description": "Kubernetes集群管理MCP服务 (Streamable HTTP协议)",
+      "category": "kubernetes"
+    },
+    "calculator-sse": {
+      "type": "sse",
+      "config": {
+        "url": "http://127.0.0.1:8000/sse"
+      },
+      "enabled": false,
+      "description": "计算器服务 (SSE协议) - 官方demo示例",
+      "category": "utility"
+    },
+    "calculator-http": {
+      "type": "streamable-http",
+      "config": {
+        "url": "http://127.0.0.1:8000/mcp"
+      },
+      "enabled": false,
+      "description": "计算器服务 (Streamable HTTP协议) - 官方demo示例", 
+      "category": "utility"
+    }
+  },
+  "global_settings": {
+    "max_concurrent_servers": 10,
+    "log_level": "INFO",
+    "enable_hot_reload": true
+  },
+  "categories": {
+    "utility": {
+      "name": "实用工具",
+      "description": "通用实用工具和计算服务",
+      "color": "#4CAF50"
+    },
+    "network": {
+      "name": "网络服务",
+      "description": "网络请求和数据获取服务",
+      "color": "#2196F3"
+    },
+    "kubernetes": {
+      "name": "Kubernetes",
+      "description": "Kubernetes集群管理和容器编排",
+      "color": "#9C27B0"
+    }
+  }
+} 

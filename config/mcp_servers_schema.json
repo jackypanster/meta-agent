@@ -23,53 +23,50 @@
           "oneOf": [
             {
               "description": "命令行启动的MCP服务器",
-              "required": ["command", "args"],
+              "required": ["command", "args", "enabled"],
               "properties": {
                 "command": {
                   "type": "string",
-                  "minLength": 1,
-                  "description": "启动服务器的命令"
+                  "description": "启动命令"
                 },
                 "args": {
                   "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "description": "命令参数列表"
+                  "items": {"type": "string"},
+                  "description": "命令参数"
                 },
                 "enabled": {
                   "type": "boolean",
-                  "default": true,
                   "description": "是否启用此服务器"
                 },
                 "description": {
                   "type": "string",
-                  "description": "服务器功能描述"
+                  "description": "服务器描述"
                 },
                 "category": {
                   "type": "string",
+                  "enum": ["utility", "network", "storage", "development", "system"],
                   "description": "服务器分类"
                 },
                 "env": {
                   "type": "object",
-                  "description": "环境变量设置",
-                  "patternProperties": {
-                    "^[A-Z_][A-Z0-9_]*$": {
-                      "type": "string"
-                    }
-                  }
+                  "description": "环境变量"
+                },
+                "timeout": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "超时时间（秒）"
                 }
               },
               "additionalProperties": false
             },
             {
               "description": "SSE协议的MCP服务器",
-              "required": ["type", "config"],
+              "required": ["type", "config", "enabled"],
               "properties": {
                 "type": {
                   "type": "string",
-                  "enum": ["sse"],
-                  "description": "服务器协议类型"
+                  "const": "sse",
+                  "description": "服务器类型：SSE"
                 },
                 "config": {
                   "type": "object",
@@ -78,32 +75,59 @@
                     "url": {
                       "type": "string",
                       "format": "uri",
-                      "description": "SSE服务器URL地址"
-                    },
-                    "timeout": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "description": "连接超时时间（秒）"
-                    },
-                    "reconnect": {
-                      "type": "boolean",
-                      "default": true,
-                      "description": "是否自动重连"
+                      "description": "SSE服务器URL"
                     }
                   },
                   "additionalProperties": false
                 },
                 "enabled": {
                   "type": "boolean",
-                  "default": true,
                   "description": "是否启用此服务器"
                 },
                 "description": {
                   "type": "string",
-                  "description": "服务器功能描述"
+                  "description": "服务器描述"
                 },
                 "category": {
                   "type": "string",
+                  "enum": ["utility", "network", "storage", "development", "system", "kubernetes"],
+                  "description": "服务器分类"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Streamable HTTP协议的MCP服务器",
+              "required": ["type", "config", "enabled"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "streamable-http",
+                  "description": "服务器类型：Streamable HTTP"
+                },
+                "config": {
+                  "type": "object",
+                  "required": ["url"],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "Streamable HTTP服务器URL"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "是否启用此服务器"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "服务器描述"
+                },
+                "category": {
+                  "type": "string",
+                  "enum": ["utility", "network", "storage", "development", "system", "kubernetes"],
                   "description": "服务器分类"
                 }
               },
@@ -116,17 +140,17 @@
     },
     "global_settings": {
       "type": "object",
-      "description": "Global settings for MCP servers. Note: Not all settings are used by the agent itself; some are for the MCP server processes. For example, the agent follows a fail-fast principle and does not implement retries for tool calls.",
+      "required": ["max_concurrent_servers", "log_level"],
       "properties": {
         "max_concurrent_servers": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 100,
+          "maximum": 50,
           "description": "最大并发服务器数量"
         },
         "log_level": {
           "type": "string",
-          "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+          "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
           "description": "日志级别"
         },
         "enable_hot_reload": {
@@ -140,16 +164,22 @@
       "type": "object",
       "description": "服务器分类定义",
       "patternProperties": {
-        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+        "^[a-z][a-z0-9_]*$": {
           "type": "object",
+          "required": ["name", "description"],
           "properties": {
+            "name": {
+              "type": "string",
+              "description": "分类显示名称"
+            },
             "description": {
               "type": "string",
               "description": "分类描述"
             },
             "color": {
               "type": "string",
-              "description": "分类颜色"
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "description": "分类颜色（十六进制）"
             }
           },
           "additionalProperties": false

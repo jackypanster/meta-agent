@@ -31,16 +31,19 @@
   },
   "categories": {
     "utility": {
+      "name": "实用工具",
       "description": "实用工具服务",
-      "color": "blue"
+      "color": "#4CAF50"
     },
     "network": {
+      "name": "网络服务",
       "description": "网络和数据获取服务",
-      "color": "green"
+      "color": "#2196F3"
     },
     "storage": {
+      "name": "存储服务",
       "description": "数据存储和管理服务",
-      "color": "orange"
+      "color": "#FF9800"
     }
   },
   "metadata": {
