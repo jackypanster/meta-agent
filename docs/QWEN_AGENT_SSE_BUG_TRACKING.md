@@ -79,7 +79,7 @@ server_params = StdioServerParameters(command=mcp_server['command'], ...)
   "k8s-mcp": {
     "type": "sse",
     "config": {
-      "url": "http://ncpdev.gf.com.cn:31455/sse"
+      "url": "http://your-k8s-cluster.example.com:31455/sse"
     },
     "enabled": true,
     "description": "Kubernetes集群管理MCP服务，基于SSE协议",
@@ -287,7 +287,7 @@ else:
   "k8s-mcp-sse": {
     "type": "sse",
     "config": {
-      "url": "http://ncpdev.gf.com.cn:31455/sse"
+      "url": "http://your-k8s-cluster.example.com:31455/sse"
     },
     "enabled": true
   }

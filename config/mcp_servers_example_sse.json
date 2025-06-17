@@ -12,7 +12,7 @@
     "k8s-mcp-sse": {
       "type": "sse",
       "config": {
-        "url": "http://ncpdev.gf.com.cn:31455/sse"
+        "url": "http://your-k8s-cluster.example.com:31455/sse"
       },
       "enabled": false,
       "description": "Kubernetes集群管理MCP服务 (SSE协议)",
@@ -21,7 +21,7 @@
     "k8s-mcp-http": {
       "type": "streamable-http", 
       "config": {
-        "url": "http://ncpdev.gf.com.cn:31455/mcp"
+        "url": "http://your-k8s-cluster.example.com:31455/mcp"
       },
       "enabled": false,
       "description": "Kubernetes集群管理MCP服务 (Streamable HTTP协议)",
