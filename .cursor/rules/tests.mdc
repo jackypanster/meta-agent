@@ -3,3 +3,51 @@ description:
 globs:
 alwaysApply: false
 ---
+# 🧪 Testing Rules - Fail-Fast Verification
+
+## **测试原则**
+
+- **✅ DO**: 测试所有异常都被正确抛出
+- **✅ DO**: 验证任何错误情况都导致程序立即失败  
+- **✅ DO**: 测试具体的错误信息内容
+- **✅ DO**: 验证程序在异常时立即终止
+- **❌ DON'T**: 测试任何fallback或默认值行为
+- **❌ DON'T**: 编写测试来验证"容错"或"健壮性"代码
+- **❌ DON'T**: 测试异常被"优雅处理"的情况
+
+## **推荐测试模式**
+
+```python
+# ✅ GOOD: 测试所有异常行为
+def test_missing_config_raises_error():
+    with pytest.raises(ConfigurationError, match="❌ .env文件不存在"):
+        validate_config()
+
+def test_invalid_api_key_fails_fast():
+    with pytest.raises(APIConnectionError):
+        create_llm_config()
+
+def test_file_not_found_fails_immediately():
+    with pytest.raises(FileNotFoundError):
+        load_required_file("nonexistent.txt")
+
+def test_json_parse_error_fails_immediately():
+    with pytest.raises(json.JSONDecodeError):
+        parse_json_data("invalid json")
+
+def test_database_error_fails_immediately():
+    with pytest.raises(DatabaseError):
+        get_user_by_id(999999)
+
+# ❌ BAD: 测试任何形式的错误处理
+def test_fallback_returns_default():
+    # 这种测试鼓励错误设计！
+    assert get_value_with_fallback("missing", "default") == "default"
+
+def test_graceful_error_handling():
+    # 任何"优雅"处理都是错误的！
+    result = safe_operation_that_might_fail()
+    assert result is not None
+```
+
+参考 [fail-fast规则](mdc:.cursor/rules/fail_fast.mdc) 了解完整的异常处理准则。

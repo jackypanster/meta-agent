@@ -127,6 +127,22 @@ class Config:
         value = self.get(key)  # 这会在配置不存在时抛出异常
         return value.lower() in ['true', '1', 'yes', 'on']
     
+    def get_bool_optional(self, key: str, default: bool = False) -> bool:
+        """
+        获取可选的布尔类型配置值 - 不存在时返回默认值
+        
+        Args:
+            key: 配置键名
+            default: 默认值
+            
+        Returns:
+            布尔值或默认值
+        """
+        if key not in self._config:
+            return default
+        value = self._config[key]
+        return value.lower() in ['true', '1', 'yes', 'on']
+    
     def list_all(self) -> Dict[str, str]:
         """返回所有配置（用于调试）
         

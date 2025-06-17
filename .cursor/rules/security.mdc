@@ -3,3 +3,178 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: Enforce security best practices, especially API key protection and sensitive file handling
+globs: .env*, .cursor/mcp.json*, **/*.key, **/*.secret, **/config/**/*.json
+alwaysApply: true
+---
+
+# 🔐 Security Rules - API Key Protection
+
+## **CRITICAL: API Key File Protection**
+
+- **NEVER commit files containing API keys or sensitive credentials to version control**
+- **ALWAYS verify sensitive files are in .gitignore before any commit**
+- **IMMEDIATELY revoke and regenerate keys if accidentally committed**
+
+### **Protected File Types**
+
+#### **Environment Files**
+- ✅ **DO**: Use `.env` for local development
+- ✅ **DO**: Provide `env.template` with placeholder values
+- ❌ **DON'T**: Commit `.env` files to git
+- ❌ **DON'T**: Put real API keys in template files
+
+```bash
+# ✅ GOOD: Template file (env.template)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# ❌ BAD: Real keys in any committed file
+DEEPSEEK_API_KEY=sk-da85e6f63dc1462eb575e0d4357ab63e
+```
+
+#### **MCP Configuration Files**
+- ✅ **DO**: Use `.cursor/mcp.json` for local Cursor configuration
+- ✅ **DO**: Provide `.cursor/mcp.json.template` with placeholders
+- ❌ **DON'T**: Commit `.cursor/mcp.json` to git
+- ❌ **DON'T**: Leave real API keys in MCP config templates
+
+```json
+// ✅ GOOD: Template file (.cursor/mcp.json.template)
+{
+  "servers": {
+    "taskmaster-ai": {
+      "env": {
+        "DEEPSEEK_API_KEY": "your_deepseek_api_key_here"
+      }
+    }
+  }
+}
+
+// ❌ BAD: Real keys in committed configuration
+{
+  "env": {
+    "DEEPSEEK_API_KEY": "sk-da85e6f63dc1462eb575e0d4357ab63e"
+  }
+}
+```
+
+### **Required .gitignore Entries**
+
+Always ensure these patterns are in [.gitignore](mdc:.gitignore):
+
+```gitignore
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# MCP configuration with API keys
+.cursor/mcp.json
+
+# Other sensitive files
+*.key
+*.secret
+config/secrets.json
+```
+
+### **Security Verification Commands**
+
+Before any commit, always run:
+
+```bash
+# Verify sensitive files are ignored
+git check-ignore .env .cursor/mcp.json
+
+# Check for accidentally staged sensitive files
+git status | grep -E "\.(env|key|secret)$|mcp\.json$"
+
+# Scan for potential API keys in staged files
+git diff --cached | grep -i "api[_-]key\|secret\|token"
+```
+
+### **Template File Standards**
+
+#### **Required Template Files**
+- `env.template` - Environment variable examples
+- `.cursor/mcp.json.template` - MCP configuration examples
+- [SECURITY.md](mdc:SECURITY.md) - Setup and security instructions
+
+#### **Template Content Rules**
+- ✅ **DO**: Use descriptive placeholder values
+- ✅ **DO**: Include comments explaining each variable
+- ✅ **DO**: Reference where to obtain real values
+- ❌ **DON'T**: Include any real credentials, even expired ones
+- ❌ **DON'T**: Use weak placeholder patterns like `xxx` or `123`
+
+```bash
+# ✅ GOOD: Descriptive placeholders
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+# From https://platform.deepseek.com/
+
+# ❌ BAD: Weak placeholders
+DEEPSEEK_API_KEY=xxx
+DEEPSEEK_API_KEY=123456
+```
+
+## **Code Implementation Security**
+
+### **Environment Variable Loading**
+- ✅ **DO**: Use environment variables for all sensitive configuration
+- ✅ **DO**: Provide clear error messages for missing keys
+- ✅ **DO**: Validate API key format before use
+- ❌ **DON'T**: Hardcode API keys in source code
+- ❌ **DON'T**: Log or print API keys in debug output
+
+```python
+# ✅ GOOD: Secure environment loading
+from src.config.settings import get_config, ConfigError
+
+try:
+    config = get_config()
+    api_key = config.require('DEEPSEEK_API_KEY')
+except ConfigError:
+    raise ModelConfigError(
+        "❌ 未找到DeepSeek API密钥！\n"
+        "请在.env文件中设置: DEEPSEEK_API_KEY=your-api-key"
+    )
+
+# ❌ BAD: Hardcoded keys
+api_key = "sk-da85e6f63dc1462eb575e0d4357ab63e"
+```
+
+### **Logging and Debug Output**
+- ✅ **DO**: Mask sensitive values in logs
+- ✅ **DO**: Use `***` or `[REDACTED]` for sensitive data
+- ❌ **DON'T**: Print full API keys in error messages
+- ❌ **DON'T**: Include credentials in debug output
+
+```python
+# ✅ GOOD: Masked logging
+print(f"✓ API key configured: {api_key[:8]}***")
+
+# ❌ BAD: Full key exposure
+print(f"Using API key: {api_key}")
+```
+
+## **Emergency Response**
+
+### **If API Key is Accidentally Committed**
+1. **IMMEDIATELY** revoke the compromised key at the provider
+2. **Generate** a new API key
+3. **Update** local configuration with new key
+4. **Clean** git history or contact repository administrator
+5. **Verify** all affected systems are updated
+
+### **Prevention Checklist**
+- [ ] All sensitive files listed in `.gitignore`
+- [ ] Template files created with placeholders
+- [ ] [SECURITY.md](mdc:SECURITY.md) documentation updated
+- [ ] Pre-commit hooks configured (recommended)
+- [ ] Team members trained on security practices
+
+## **Related Documentation**
+- [SECURITY.md](mdc:SECURITY.md) - Complete security setup guide
+- [env.template](mdc:env.template) - Environment variable template
+- [.cursor/mcp.json.template](mdc:.cursor/mcp.json.template) - MCP configuration template

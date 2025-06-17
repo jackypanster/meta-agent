@@ -3,3 +3,358 @@ description:
 globs:
 alwaysApply: false
 ---
+---
+description: Enforce fail-fast principle - immediate failure over fallback mechanisms
+globs: src/**/*.py, tests/**/*.py, **/*.py
+alwaysApply: true
+---
+
+# ⚡ Fail-Fast Design Principle
+
+## **核心原则：立即失败优于掩盖问题**
+
+- **NEVER use fallback mechanisms to hide ANY problems or exceptions**
+- **ALWAYS let ALL exceptions bubble up immediately for fast problem identification**
+- **NEVER write long, smelly code with multiple fallbacks for ANY error scenarios**
+- **ANY exception should cause immediate program termination, not silent fallback**
+
+## **所有异常处理规则**
+
+### **✅ DO: 任何异常都立即失败**
+
+```python
+# ✅ GOOD: 配置缺失时立即失败
+def get_config_value(key: str) -> str:
+    try:
+        return config.require(key)
+    except ConfigError as e:
+        raise RuntimeError(f"❌ 配置错误 '{key}': {str(e)}") from e
+
+# ✅ GOOD: API调用失败时立即抛出
+def call_api(endpoint: str) -> dict:
+    response = requests.get(endpoint)
+    if not response.ok:
+        raise APIError(f"API调用失败: {response.status_code}")
+    return response.json()
+
+# ✅ GOOD: 文件操作失败时立即失败
+def load_required_file(path: str) -> str:
+    # 不要捕获FileNotFoundError，让它直接抛出
+    with open(path) as f:
+        return f.read()
+
+# ✅ GOOD: 数据库操作失败时立即失败
+def get_user(user_id: int) -> User:
+    # 不要捕获数据库异常，让它直接抛出
+    return db.session.query(User).filter(User.id == user_id).one()
+
+# ✅ GOOD: JSON解析失败时立即失败
+def parse_json_data(data: str) -> dict:
+    # 不要捕获JSONDecodeError，让它直接抛出
+    return json.loads(data)
+
+# ✅ GOOD: 网络请求失败时立即失败
+def fetch_data(url: str) -> dict:
+    # 不要捕获requests异常，让它直接抛出
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()  # 立即抛出HTTP错误
+    return response.json()
+```
+
+### **❌ DON'T: 使用fallback掩盖任何问题**
+
+```python
+# ❌ BAD: fallback掩盖配置问题
+def get_config_with_fallback(key: str, fallback: str = "") -> str:
+    try:
+        return config.get(key)
+    except Exception:
+        print(f"⚠️ 配置缺失，使用默认值: {fallback}")
+        return fallback  # 掩盖了真正的问题！
+
+# ❌ BAD: 静默处理API错误
+def call_api_with_fallback(endpoint: str) -> dict:
+    try:
+        response = requests.get(endpoint)
+        return response.json()
+    except Exception as e:
+        print(f"API调用失败，返回空字典: {e}")
+        return {}  # 掩盖了网络或API问题！
+
+# ❌ BAD: 静默处理文件读取错误
+def load_file_with_fallback(path: str) -> str:
+    try:
+        with open(path) as f:
+            return f.read()
+    except Exception as e:
+        print(f"文件读取失败，返回空字符串: {e}")
+        return ""  # 掩盖了文件不存在或权限问题！
+
+# ❌ BAD: 静默处理数据库错误
+def get_user_with_fallback(user_id: int) -> Optional[User]:
+    try:
+        return db.session.query(User).filter(User.id == user_id).one()
+    except Exception as e:
+        print(f"数据库查询失败，返回None: {e}")
+        return None  # 掩盖了数据库连接或查询问题！
+
+# ❌ BAD: 静默处理JSON解析错误
+def parse_json_with_fallback(data: str) -> dict:
+    try:
+        return json.loads(data)
+    except Exception as e:
+        print(f"JSON解析失败，返回空字典: {e}")
+        return {}  # 掩盖了数据格式问题！
+
+# ❌ BAD: 多层fallback导致代码冗长
+def complex_fallback_mess(key: str) -> str:
+    try:
+        return primary_source.get(key)
+    except Exception:
+        try:
+            return secondary_source.get(key)
+        except Exception:
+            try:
+                return tertiary_source.get(key)
+            except Exception:
+                return "default_value"  # 谁知道哪里出了问题？
+```
+
+## **异常处理最佳实践**
+
+### **立即失败的异常策略**
+
+- ✅ **DO**: 让所有异常快速传播到调用者
+- ✅ **DO**: 提供清晰的错误信息指向问题根源
+- ✅ **DO**: 使用具体的异常类型
+- ✅ **DO**: 让程序在遇到任何异常时立即终止
+- ❌ **DON'T**: 捕获任何异常后返回默认值
+- ❌ **DON'T**: 使用bare except: 捕获所有异常
+- ❌ **DON'T**: 打印警告后继续执行
+- ❌ **DON'T**: 使用try-except包装任何可能失败的操作
+- ❌ **DON'T**: 认为"程序不应该崩溃"而添加异常处理
+
+```python
+# ✅ GOOD: 具体的异常类型和清晰的错误信息
+class ConfigurationError(Exception):
+    """配置相关错误"""
+    pass
+
+class APIConnectionError(Exception):
+    """API连接错误"""
+    pass
+
+class DataProcessingError(Exception):
+    """数据处理错误"""
+    pass
+
+def validate_config():
+    if not os.path.exists('.env'):
+        raise ConfigurationError(
+            "❌ .env文件不存在！\n"
+            "请复制 env.template 到 .env 并填入API密钥"
+        )
+
+def process_data(data: str):
+    # 不要捕获任何异常，让它们直接抛出
+    parsed = json.loads(data)  # 可能抛出JSONDecodeError
+    result = complex_calculation(parsed)  # 可能抛出各种异常
+    return result
+
+# ❌ BAD: 任何形式的异常处理都是错误的
+def validate_config_bad():
+    try:
+        # 一些配置验证
+        pass
+    except Exception as e:
+        print(f"配置有问题，但我们继续: {e}")  # 掩盖问题！
+        return False
+
+def process_data_bad(data: str):
+    try:
+        return json.loads(data)
+    except Exception as e:
+        print(f"数据处理失败: {e}")
+        return {}  # 任何fallback都是错误的！
+```
+
+## **配置管理规则**
+
+### **配置加载策略**
+
+- ✅ **DO**: 程序启动时验证所有必需配置
+- ✅ **DO**: 配置缺失时立即失败，不要启动程序
+- ✅ **DO**: 提供明确的配置错误信息
+- ❌ **DON'T**: 程序运行时才发现配置问题
+- ❌ **DON'T**: 使用硬编码的默认值作为fallback
+
+```python
+# ✅ GOOD: 启动时验证配置
+def validate_startup_config():
+    """程序启动时验证所有必需配置"""
+    required_configs = [
+        'DEEPSEEK_API_KEY',
+        'DATABASE_URL',
+        'SECRET_KEY'
+    ]
+    
+    missing = []
+    for key in required_configs:
+        try:
+            config.require(key)
+        except ConfigError:
+            missing.append(key)
+    
+    if missing:
+        raise ConfigurationError(
+            f"❌ 缺少必需配置: {', '.join(missing)}\n"
+            f"请在.env文件中设置这些配置项"
+        )
+
+# ❌ BAD: 运行时才发现配置问题
+def get_api_key_with_default():
+    try:
+        return config.get('API_KEY')
+    except:
+        return "default-key-that-wont-work"  # 问题被推迟到API调用时！
+```
+
+## **代码质量规则**
+
+### **避免长且臭的fallback代码**
+
+- ✅ **DO**: 保持函数简短，单一职责
+- ✅ **DO**: 让每个函数要么成功，要么失败
+- ✅ **DO**: 使用类型提示明确函数契约
+- ❌ **DON'T**: 写超过20行的错误处理代码
+- ❌ **DON'T**: 在一个函数中处理多种fallback情况
+- ❌ **DON'T**: 使用深层嵌套的try-catch
+
+```python
+# ✅ GOOD: 清晰简洁的函数
+def load_prompt(key: str) -> str:
+    """加载提示词，失败时立即抛出异常"""
+    return prompt_manager.get_prompt(key)
+
+def send_request(url: str) -> dict:
+    """发送HTTP请求，失败时立即抛出异常"""
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+# ❌ BAD: 又长又臭的fallback代码
+def load_prompt_with_fallbacks(key: str, category: str = "", locale: str = "zh") -> str:
+    try:
+        return prompt_manager.get_prompt(key)
+    except Exception:
+        try:
+            return prompt_manager.get_prompt(f"{category}.{key}")
+        except Exception:
+            try:
+                return prompt_manager.get_prompt(f"{locale}.{key}")
+            except Exception:
+                try:
+                    return prompt_manager.get_prompt(f"default.{key}")
+                except Exception:
+                    try:
+                        return hardcoded_prompts.get(key, "")
+                    except Exception:
+                        return f"Missing prompt: {key}"  # 30行代码掩盖问题！
+```
+
+## **测试和调试原则**
+
+### **可测试的fail-fast代码**
+
+- ✅ **DO**: 编写测试验证异常被正确抛出
+- ✅ **DO**: 使用pytest.raises验证异常行为
+- ✅ **DO**: 模拟配置缺失场景进行测试
+- ❌ **DON'T**: 测试fallback行为，而应该测试正确行为
+
+```python
+# ✅ GOOD: 测试异常行为
+def test_config_missing_raises_error():
+    with pytest.raises(ConfigurationError, match="❌ .env文件不存在"):
+        validate_config()
+
+def test_api_failure_raises_error():
+    with pytest.raises(APIConnectionError):
+        call_api("http://invalid-endpoint")
+
+# ❌ BAD: 测试fallback行为
+def test_config_fallback_returns_default():
+    # 这种测试鼓励了错误的设计！
+    result = get_config_with_fallback("missing_key", "default")
+    assert result == "default"
+```
+
+## **错误信息规则**
+
+### **提供可操作的错误信息**
+
+- ✅ **DO**: 错误信息包含具体的修复步骤
+- ✅ **DO**: 指出具体的文件路径或配置项
+- ✅ **DO**: 使用emoji和格式化提高可读性
+- ❌ **DON'T**: 提供模糊的"something went wrong"信息
+- ❌ **DON'T**: 只显示技术异常信息
+
+```python
+# ✅ GOOD: 可操作的错误信息
+raise ConfigurationError(
+    "❌ DeepSeek API密钥未配置！\n"
+    "请在.env文件中设置: DEEPSEEK_API_KEY=your-api-key\n"
+    "获取API密钥: https://platform.deepseek.com/"
+)
+
+raise FileNotFoundError(
+    "❌ 配置文件不存在: config/prompts/system_prompts.json\n"
+    "请运行: cp config/prompts/system_prompts.json.template config/prompts/system_prompts.json"
+)
+
+# ❌ BAD: 无用的错误信息
+raise Exception("Configuration error")  # 完全没有帮助！
+raise ValueError("Invalid value")  # 什么值？哪里无效？
+```
+
+## **重构和代码审查**
+
+### **识别需要重构的fallback代码**
+
+如果代码中出现以下模式，立即重构：
+- 🚨 **任何try-catch结构（除了资源清理）**
+- 🚨 **函数中有任何"fallback"、"default"或"backup"变量**
+- 🚨 **函数中有任何异常处理逻辑**
+- 🚨 **注释中出现"如果失败就..."、"出错时..."的逻辑**
+- 🚨 **返回Optional类型来处理可能的失败**
+- 🚨 **使用Union类型来处理成功/失败情况**
+- 🚨 **任何形式的"容错"或"健壮性"处理**
+
+### **重构策略**
+
+1. **移除所有try-catch** - 让异常自然传播
+2. **删除所有fallback逻辑** - 不要处理任何错误情况
+3. **简化函数签名** - 移除Optional和Union返回类型
+4. **移除所有默认值参数** - 强制调用者提供所有必需参数
+5. **删除所有"容错"代码** - 程序应该在遇到问题时立即崩溃
+6. **移除所有日志记录异常的代码** - 异常本身就是最好的错误信息
+
+## **相关文档**
+
+- [安全规则](mdc:.cursor/rules/security.mdc) - API密钥保护
+- [代码规范](mdc:.cursor/rules/cursor_rules.mdc) - 一般代码规范
+- [测试规则](mdc:.cursor/rules/tests.mdc) - 测试最佳实践
+
+---
+
+## **🚨 严厉警告**
+
+**任何试图"让程序更健壮"、"增加容错性"、"优雅处理错误"的想法都是错误的！**
+
+- 🚫 **程序崩溃是好事** - 它能立即暴露问题
+- 🚫 **异常处理是有害的** - 它掩盖了真正的问题
+- 🚫 **默认值是危险的** - 它让程序在错误状态下继续运行
+- 🚫 **容错机制是陷阱** - 它让bug变得难以发现
+
+**记住：代码应该要么工作，要么快速失败。没有中间地带！**
+
+**让程序崩溃，让问题暴露，让开发者立即修复！**
