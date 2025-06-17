@@ -12,7 +12,7 @@ Qwen-Agent MVP - 主程序入口
 
 from typing import NoReturn
 
-from src.app_core import initialize_prompt_manager, create_agent, run_conversation_loop
+from src.app_core import create_agent, run_conversation_loop
 from src.ui import show_welcome
 
 
@@ -20,21 +20,17 @@ def main() -> NoReturn:
     """主函数 - 专注于程序流程控制，失败时立即崩溃
     
     Raises:
-        PromptManagerError: 提示词配置失败时立即抛出
         ConfigError: 配置加载失败时立即抛出
         MCPConfigError: MCP配置失败时立即抛出
         Exception: 任何其他异常都会立即传播导致程序崩溃
     """
-    # 1. 初始化提示词管理器
-    initialize_prompt_manager()
-    
-    # 2. 显示欢迎界面
+    # 1. 显示欢迎界面
     show_welcome()
     
-    # 3. 创建并配置Agent
+    # 2. 创建并配置Agent
     agent = create_agent()
     
-    # 4. 运行对话循环
+    # 3. 运行对话循环
     run_conversation_loop(agent)
 
 

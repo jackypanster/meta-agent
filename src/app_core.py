@@ -11,52 +11,10 @@ from qwen_agent.agents import Assistant
 from qwen_agent.utils.output_beautify import typewriter_print
 
 from src.config.settings import get_config
-from src.config.prompt_manager import PromptManager, PromptManagerError
 from src.tools.qwen_tools.memory_tools import get_memory_store
 from src.llm_config import create_llm_config, get_model_display_name
 from src.agent_setup import create_tools_list
 from src.ui import show_welcome, show_help, show_memory, clear_screen
-
-
-# 全局PromptManager实例
-prompt_manager = None
-
-
-def initialize_prompt_manager() -> PromptManager:
-    """初始化PromptManager - 失败时立即抛出异常
-    
-    Returns:
-        PromptManager实例
-        
-    Raises:
-        PromptManagerError: 提示词配置加载失败时立即抛出
-    """
-    global prompt_manager
-    
-    prompt_manager = PromptManager("config/prompts")
-    print("✓ 提示词配置加载成功")
-    return prompt_manager
-
-
-def get_prompt(prompt_key: str, variables: Dict[str, Any] = None) -> str:
-    """获取提示词，配置缺失时快速失败
-    
-    Args:
-        prompt_key: 提示词键
-        variables: 变量替换字典
-        
-    Returns:
-        提示词内容
-        
-    Raises:
-        PromptManagerError: 提示词不存在或配置错误时立即失败
-    """
-    global prompt_manager
-    
-    if not prompt_manager:
-        raise PromptManagerError(f"PromptManager未初始化！无法获取提示词: {prompt_key}")
-    
-    return prompt_manager.get_prompt(prompt_key, variables)
 
 
 def create_agent() -> Assistant:
@@ -69,35 +27,28 @@ def create_agent() -> Assistant:
         各种配置错误: 配置失败时立即抛出
     """
     # 创建LLM配置
-    ai_loading_msg = get_prompt("ai_loading")
-    print(f"\n{ai_loading_msg}")
+    print("\n🔧 正在初始化AI模型...")
     
     llm_cfg = create_llm_config()
     
     # 设置工具
-    mcp_loading_msg = get_prompt("mcp_loading")
-    print(f"\n{mcp_loading_msg}")
+    print("\n📡 正在加载MCP服务器配置...")
     
     tools = create_tools_list()
     
-    # 获取系统提示词
-    system_message = get_prompt("system_base")
+    # 使用空系统提示词，完全依赖qwen-agent框架内置指令
+    system_message = ""
     
-    # 获取Agent配置
-    agent_name = get_prompt("agent_name")
-    agent_description = get_prompt("agent_description")
-    
-    # 创建Agent
+    # 创建Agent - 使用简单配置
     agent = Assistant(
         llm=llm_cfg,
         system_message=system_message,
         function_list=tools,
-        name=agent_name,
-        description=agent_description
+        name="AI助手",
+        description="基于qwen-agent框架的智能助手"
     )
     
-    ai_success_msg = get_prompt("ai_success")
-    print(ai_success_msg)
+    print("✓ AI助手初始化成功！")
     
     return agent
 
@@ -115,11 +66,7 @@ def run_conversation_loop(agent: Assistant) -> NoReturn:
     memory_store = get_memory_store()
     model_display = get_model_display_name()
     
-    conversation_start_msg = get_prompt(
-        "conversation_start",
-        {"model_display": model_display}
-    )
-    print(f"\n{conversation_start_msg}\n")
+    print(f"\n✨ 开始对话吧！(使用{model_display})\n")
     
     while True:
         # 获取用户输入 - 只处理用户中断
@@ -127,8 +74,7 @@ def run_conversation_loop(agent: Assistant) -> NoReturn:
         
         # 处理特殊命令
         if user_input.lower() in ['quit', 'exit', 'q', '退出']:
-            goodbye_msg = get_prompt("goodbye_message")
-            print(goodbye_msg)
+            print("👋 再见！")
             break
         elif user_input.lower() in ['help', 'h', '帮助']:
             show_help()
@@ -146,8 +92,7 @@ def run_conversation_loop(agent: Assistant) -> NoReturn:
         messages.append({'role': 'user', 'content': user_input})
         
         # 显示AI回复
-        ai_response_prefix = get_prompt("ai_response_prefix")
-        print(f"\n{ai_response_prefix}", end='', flush=True)
+        print(f"\n🤖 助手: ", end='', flush=True)
         
         # 调用Agent并流式显示
         # 注意: 任何来自 agent.run() 的异常都没有被捕获，
