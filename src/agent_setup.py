@@ -81,13 +81,13 @@ def create_tools_list() -> List[Any]:
     # Relying on potential auto-discovery mechanisms of the Qwen framework
     # is not currently implemented or confirmed for this project.
     tools = [
-        'custom_save_info', 
-        'custom_recall_info', 
-        'custom_math_calc',
+        # 'custom_save_info', 
+        # 'custom_recall_info', 
+        # 'custom_math_calc',
         {
             'mcpServers': mcp_servers  # 使用动态加载的MCP配置
         },
-        'code_interpreter',  # 内置代码解释器工具
+        # 'code_interpreter',  # 内置代码解释器工具
     ]
     
     return tools

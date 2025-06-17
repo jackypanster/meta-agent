@@ -3,7 +3,7 @@
   "default_locale": "zh",
   "prompts": {
     "conversation_start": {
-      "content": "欢迎使用AI助手！我可以帮您：\n- 智能对话和答疑\n- 记忆和回忆信息\n- 数学计算\n- 代码执行和分析\n- 访问外部服务\n\n请告诉我您需要什么帮助？",
+      "content": "",
       "description": "对话开始时的欢迎提示",
       "variables": [],
       "category": "conversation",
@@ -12,7 +12,7 @@
       "tags": ["welcome", "conversation"]
     },
     "conversation_continue": {
-      "content": "根据我们之前的对话，您提到了：$previous_context\n\n请继续告诉我您需要什么帮助？",
+      "content": "",
       "description": "继续对话时的上下文提示",
       "variables": ["previous_context"],
       "category": "conversation",

@@ -111,7 +111,7 @@ def _create_qwen3_config(config) -> Dict[str, Any]:
     print(f"🧠 思考模式: {'启用' if enable_thinking else '禁用'}")
     
     # Qwen3-32B模型名称（根据官方示例）
-    model = 'Qwen/Qwen3-32B'
+    model = 'coder'
     model_name = "Qwen3-32B 本地部署模型"
     
     print(f"⚡ 使用{model_name}")

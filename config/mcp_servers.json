@@ -5,7 +5,7 @@
     "time": {
       "command": "uvx",
       "args": ["mcp-server-time", "--local-timezone=Asia/Shanghai"],
-      "enabled": true,
+      "enabled": false,
       "description": "时间和日期操作服务，支持亚洲/上海时区",
       "category": "utility"
     },
@@ -19,7 +19,7 @@
     "memory": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "enabled": true,
+      "enabled": false,
       "description": "外部内存存储服务，提供持久化数据存储功能",
       "category": "storage"
     }

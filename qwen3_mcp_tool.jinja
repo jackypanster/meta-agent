@@ -1,0 +1,61 @@
+{# Enhanced template for Qwen3 optimized for programming tasks with tool/function call support #}
+{% if messages[0]['role'] == 'system' %}
+    {% set loop_messages = messages[1:] %}
+    {% set system_message = messages[0]['content'] %}
+{% else %}
+    {% set loop_messages = messages %}
+    {% set system_message = "You are a programming assistant specialized in writing clean, efficient, and well-documented code. Provide direct code solutions without unnecessary explanations unless requested. Focus on best practices, optimal algorithms, and proper error handling. When multiple approaches exist, choose the most efficient one by default. Always include necessary imports and dependencies." %}
+{% endif %}
+
+{# Always include system message for programming optimization #}
+<|im_start|>system
+{{ system_message }}<|im_end|>
+
+{% for message in loop_messages %}
+    {% if message['role'] == 'user' %}
+<|im_start|>user
+{{ message['content'] }}<|im_end|>
+    {% elif message['role'] == 'assistant' %}
+<|im_start|>assistant
+{% if message.get('function_call') or message.get('tool_calls') %}
+{% if message.get('content') %}{{ message['content'] }}{% endif %}
+{% if message.get('function_call') %}
+<function_call>
+{{ message['function_call'] | tojson }}
+</function_call>
+{% endif %}
+{% if message.get('tool_calls') %}
+<tool_calls>
+{{ message['tool_calls'] | tojson }}
+</tool_calls>
+{% endif %}
+{% else %}
+{{ message['content'] }}
+{% endif %}<|im_end|>
+    {% elif message['role'] == 'tool' %}
+<|im_start|>tool
+{% if message.get('name') %}
+<tool_name>{{ message['name'] }}</tool_name>
+{% endif %}
+{{ message['content'] }}<|im_end|>
+    {% elif message['role'] == 'function' %}
+<|im_start|>function
+{% if message.get('name') %}
+<function_name>{{ message['name'] }}</function_name>
+{% endif %}
+{{ message['content'] }}<|im_end|>
+    {% else %}
+<|im_start|>{{ message['role'] }}
+{{ message['content'] }}<|im_end|>
+    {% endif %}
+{% endfor %}
+
+{% if add_generation_prompt %}
+<|im_start|>assistant
+{% if guided_decoding %}
+{# Add format instructions for guided JSON output if present #}
+<guided_json>
+{{ guided_decoding | tojson }}
+</guided_json>
+{% endif %}
+{% endif %}
