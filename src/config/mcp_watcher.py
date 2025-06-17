@@ -17,7 +17,8 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 
-from .mcp_config import get_mcp_config_loader, reset_mcp_config_loader, MCPConfigError
+from .mcp_config import get_mcp_config_loader, reset_mcp_config_loader
+from src.exceptions import MCPConfigError
 
 logger = logging.getLogger(__name__)
 

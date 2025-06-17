@@ -1,24 +1,23 @@
 """
 配置管理模块
 
-直接从 .env 文件加载配置变量，避免依赖系统环境变量。
+提供统一的配置访问接口，支持.env文件加载
 """
 
-from pathlib import Path
 from typing import Dict, Optional
 
-
-class ConfigError(Exception):
-    """配置错误"""
-    pass
+from src.config.env_loader import EnvFileLoader
+from src.exceptions import ConfigError
 
 
 class Config:
-    """配置管理类"""
+    """配置管理类
+    
+    提供统一的配置访问接口，内部使用EnvFileLoader加载配置
+    """
     
     def __init__(self, env_file: str = ".env") -> None:
-        """
-        初始化配置
+        """初始化配置
         
         Args:
             env_file: .env文件路径，默认为项目根目录的.env
@@ -28,57 +27,15 @@ class Config:
         """
         self.env_file = env_file
         self._config: Dict[str, str] = {}
-        self._load_env_file()
+        self._load_config()
     
-    def _load_env_file(self) -> None:
-        """从.env文件加载配置
-        
-        Raises:
-            ConfigError: 配置文件不存在或格式错误时立即抛出
-        """
-        # 查找.env文件路径
-        env_path = Path(self.env_file)
-        
-        # 如果不是绝对路径，则相对于项目根目录查找
-        if not env_path.is_absolute():
-            # 从当前文件位置向上查找项目根目录
-            current_dir = Path(__file__).parent.parent.parent  # src/config -> src -> root
-            env_path = current_dir / self.env_file
-        
-        if not env_path.exists():
-            raise ConfigError(f"未找到配置文件: {env_path}")
-        
-        # 解析.env文件 - 任何错误都应该立即失败
-        with open(env_path, 'r', encoding='utf-8') as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                
-                # 跳过空行和注释
-                if not line or line.startswith('#'):
-                    continue
-                
-                # 解析键值对
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    # 移除引号
-                    if value.startswith('"') and value.endswith('"'):
-                        value = value[1:-1]
-                    elif value.startswith("'") and value.endswith("'"):
-                        value = value[1:-1]
-                    
-                    self._config[key] = value
-                else:
-                    # 格式错误应该导致立即失败，而不是警告
-                    raise ConfigError(f"❌ .env文件第{line_num}行格式错误: {line}")
-        
-        print(f"✓ 已从 {env_path} 加载配置")
+    def _load_config(self) -> None:
+        """加载配置"""
+        loader = EnvFileLoader(self.env_file)
+        self._config = loader.load_env_file()
     
     def get(self, key: str) -> str:
-        """
-        获取配置值 - 如果不存在则立即失败
+        """获取配置值 - 如果不存在则立即失败
         
         Args:
             key: 配置键名
@@ -94,8 +51,7 @@ class Config:
         return self._config[key]
     
     def require(self, key: str) -> str:
-        """
-        获取必需的配置值
+        """获取必需的配置值
         
         Args:
             key: 配置键名
@@ -112,8 +68,7 @@ class Config:
         return value
     
     def get_bool(self, key: str) -> bool:
-        """
-        获取布尔类型配置值 - 如果不存在则立即失败
+        """获取布尔类型配置值 - 如果不存在则立即失败
         
         Args:
             key: 配置键名
@@ -128,8 +83,7 @@ class Config:
         return value.lower() in ['true', '1', 'yes', 'on']
     
     def get_bool_optional(self, key: str, default: bool = False) -> bool:
-        """
-        获取可选的布尔类型配置值 - 不存在时返回默认值
+        """获取可选的布尔类型配置值 - 不存在时返回默认值
         
         Args:
             key: 配置键名
@@ -182,4 +136,4 @@ def reload_config() -> Config:
     """
     global _config_instance
     _config_instance = None
-    return get_config() 
+    return get_config()

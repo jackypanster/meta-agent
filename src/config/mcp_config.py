@@ -1,34 +1,19 @@
 """
-MCP (Model Context Protocol) 配置加载器
+MCP (Model Context Protocol) 配置管理
 
-提供MCP服务器配置的加载、缓存、验证和热重载功能。
+统一的MCP配置加载和查询接口
 """
 
-import json
-import os
-import logging
 from typing import Dict, Any, Optional, List
-from pathlib import Path
-from datetime import datetime
-import jsonschema
-from jsonschema import ValidationError
 
-logger = logging.getLogger(__name__)
-
-
-class MCPConfigError(Exception):
-    """MCP配置相关错误"""
-    pass
+from src.config.mcp_loader import MCPFileLoader
+from src.config.mcp_query import MCPQueryEngine
 
 
 class MCPConfigLoader:
     """MCP配置加载器
     
-    功能：
-    - 加载和解析MCP服务器配置文件
-    - 配置文件缓存和热重载
-    - JSON Schema验证
-    - 服务器过滤和查询
+    组合文件加载器和查询引擎，提供完整的MCP配置管理功能
     """
     
     def __init__(self, config_path: str = "config/mcp_servers.json", 
@@ -42,280 +27,74 @@ class MCPConfigLoader:
         Raises:
             MCPConfigError: 配置文件不存在时立即抛出
         """
-        self.config_path = Path(config_path)
-        self.schema_path = Path(schema_path)
-        self._config_cache: Optional[Dict[str, Any]] = None
-        self._schema_cache: Optional[Dict[str, Any]] = None
-        self._last_modified: Optional[float] = None
-        
-        # 确保配置文件存在
-        if not self.config_path.exists():
-            raise MCPConfigError(f"MCP配置文件不存在: {self.config_path}")
+        self.file_loader = MCPFileLoader(config_path, schema_path)
+        self.query_engine = MCPQueryEngine(self.file_loader)
     
-    def _load_schema(self) -> Dict[str, Any]:
-        """加载JSON Schema - 失败时立即抛出异常
-        
-        Returns:
-            JSON Schema字典
-            
-        Raises:
-            MCPConfigError: Schema文件不存在时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-        """
-        if self._schema_cache is None and self.schema_path.exists():
-            with open(self.schema_path, 'r', encoding='utf-8') as f:
-                self._schema_cache = json.load(f)
-            logger.debug(f"已加载JSON Schema: {self.schema_path}")
-        elif self._schema_cache is None:
-            # Schema文件不存在应该立即失败
-            raise MCPConfigError(f"❌ JSON Schema文件不存在: {self.schema_path}")
-        return self._schema_cache
-    
-    def _validate_config(self, config: Dict[str, Any]) -> None:
-        """验证配置文件格式 - 验证失败时立即抛出异常
-        
-        Args:
-            config: 配置字典
-            
-        Raises:
-            MCPConfigError: Schema加载失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        schema = self._load_schema()  # 这会在schema不存在时抛出异常
-        
-        # 使用jsonschema验证，任何验证错误都会立即抛出
-        jsonschema.validate(config, schema)
-        logger.debug("配置文件验证通过")
-    
+    # 文件加载相关方法
     def load_config(self, force_reload: bool = False) -> Dict[str, Any]:
-        """加载MCP配置文件
-        
-        Args:
-            force_reload: 是否强制重新加载
-            
-        Returns:
-            配置字典
-            
-        Raises:
-            MCPConfigError: 配置文件加载或验证失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        current_mtime = self.config_path.stat().st_mtime
-        
-        # 检查是否需要重新加载
-        if (self._config_cache is None or 
-            force_reload or 
-            current_mtime != self._last_modified):
-            
-            with open(self.config_path, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            
-            # 验证配置格式 - 任何验证错误都会立即抛出
-            self._validate_config(config)
-            
-            # 更新缓存
-            self._config_cache = config
-            self._last_modified = current_mtime
-            
-            logger.info(f"已加载MCP配置: {self.config_path}")
-            logger.debug(f"配置版本: {config.get('version', 'unknown')}")
-            
-            # 更新元数据中的最后修改时间
-            if 'metadata' in config:
-                config['metadata']['last_modified'] = datetime.now().isoformat() + 'Z'
-        
-        return self._config_cache
-    
-    def get_enabled_servers(self) -> Dict[str, Dict[str, Any]]:
-        """获取所有启用的MCP服务器配置
-        
-        Returns:
-            启用的服务器配置字典
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        config = self.load_config()
-        servers = config.get('servers', {})
-        
-        enabled_servers = {
-            name: server_config 
-            for name, server_config in servers.items()
-            if server_config.get('enabled') is not False  # 必须明确设置为False才禁用
-        }
-        
-        logger.debug(f"找到 {len(enabled_servers)} 个启用的MCP服务器")
-        return enabled_servers
-    
-    def get_server_config(self, server_name: str) -> Optional[Dict[str, Any]]:
-        """获取指定服务器的配置
-        
-        Args:
-            server_name: 服务器名称
-            
-        Returns:
-            服务器配置字典，如果不存在或未启用则返回None
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        enabled_servers = self.get_enabled_servers()
-        return enabled_servers.get(server_name)
-    
-    def get_servers_by_category(self, category: str) -> Dict[str, Dict[str, Any]]:
-        """按分类获取服务器配置
-        
-        Args:
-            category: 服务器分类
-            
-        Returns:
-            指定分类的服务器配置字典
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        enabled_servers = self.get_enabled_servers()
-        return {
-            name: config
-            for name, config in enabled_servers.items()
-            if config.get('category') == category
-        }
-    
-    def get_global_settings(self) -> Dict[str, Any]:
-        """获取全局设置
-        
-        Returns:
-            全局设置字典
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        config = self.load_config()
-        return config.get('global_settings', {})
-    
-    def get_categories(self) -> Dict[str, Dict[str, Any]]:
-        """获取服务器分类定义
-        
-        Returns:
-            分类定义字典
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        config = self.load_config()
-        return config.get('categories', {})
-    
-    def list_server_names(self, enabled_only: bool = True) -> List[str]:
-        """列出服务器名称
-        
-        Args:
-            enabled_only: 是否只返回启用的服务器
-            
-        Returns:
-            服务器名称列表
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        if enabled_only:
-            return list(self.get_enabled_servers().keys())
-        else:
-            config = self.load_config()
-            return list(config.get('servers', {}).keys())
-    
-    def is_server_enabled(self, server_name: str) -> bool:
-        """检查服务器是否启用
-        
-        Args:
-            server_name: 服务器名称
-            
-        Returns:
-            是否启用
-            
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        return server_name in self.get_enabled_servers()
-    
-    def get_config_info(self) -> Dict[str, Any]:
-        """获取配置文件信息
-        
-        Returns:
-            配置文件信息字典
-        """
-        config = self.load_config()
-        enabled_servers = self.get_enabled_servers()
-        
-        return {
-            'config_path': str(self.config_path),
-            'version': config.get('version', 'unknown'),
-            'description': config.get('description', ''),
-            'total_servers': len(config.get('servers', {})),
-            'enabled_servers': len(enabled_servers),
-            'enabled_server_names': list(enabled_servers.keys()),
-            'categories': list(self.get_categories().keys()),
-            'last_modified': self._last_modified,
-            'global_settings': self.get_global_settings(),
-            'metadata': config.get('metadata', {})
-        }
+        """加载MCP配置文件"""
+        return self.file_loader.load_config(force_reload)
     
     def reload_config(self) -> None:
-        """重新加载配置文件 - 失败时立即抛出异常
-        
-        Raises:
-            MCPConfigError: 配置加载失败时立即抛出
-            json.JSONDecodeError: JSON解析失败时立即抛出
-            ValidationError: 配置验证失败时立即抛出
-        """
-        self._config_cache = None
-        self._schema_cache = None
-        self._last_modified = None
-        
-        # 强制重新加载配置
-        self.load_config(force_reload=True)
-        logger.info("MCP配置已重新加载")
+        """重新加载配置文件"""
+        self.file_loader.reload_config()
+    
+    # 查询相关方法 - 直接委托给查询引擎
+    def get_enabled_servers(self) -> Dict[str, Dict[str, Any]]:
+        """获取所有启用的服务器配置"""
+        return self.query_engine.get_enabled_servers()
+    
+    def get_server_config(self, server_name: str) -> Optional[Dict[str, Any]]:
+        """获取指定服务器的配置"""
+        return self.query_engine.get_server_config(server_name)
+    
+    def get_servers_by_category(self, category: str) -> Dict[str, Dict[str, Any]]:
+        """根据分类获取服务器配置"""
+        return self.query_engine.get_servers_by_category(category)
+    
+    def get_global_settings(self) -> Dict[str, Any]:
+        """获取全局设置"""
+        return self.query_engine.get_global_settings()
+    
+    def get_categories(self) -> Dict[str, Dict[str, Any]]:
+        """获取所有分类的服务器分组"""
+        return self.query_engine.get_categories()
+    
+    def list_server_names(self, enabled_only: bool = True) -> List[str]:
+        """列出服务器名称"""
+        return self.query_engine.list_server_names(enabled_only)
+    
+    def is_server_enabled(self, server_name: str) -> bool:
+        """检查服务器是否启用"""
+        return self.query_engine.is_server_enabled(server_name)
+    
+    def get_config_info(self) -> Dict[str, Any]:
+        """获取配置文件信息"""
+        return self.query_engine.get_config_info()
 
 
 # 全局配置加载器实例
-_config_loader_instance: Optional[MCPConfigLoader] = None
+_mcp_config_loader: Optional[MCPConfigLoader] = None
 
 
 def get_mcp_config_loader(config_path: str = "config/mcp_servers.json",
                          schema_path: str = "config/mcp_servers_schema.json") -> MCPConfigLoader:
-    """获取全局MCP配置加载器实例
+    """获取MCP配置加载器实例
     
     Args:
         config_path: MCP配置文件路径
-        schema_path: JSON Schema文件路径
+        schema_path: Schema文件路径
         
     Returns:
         MCPConfigLoader实例
-        
-    Raises:
-        MCPConfigError: 配置加载器初始化失败时立即抛出
     """
-    global _config_loader_instance
-    if _config_loader_instance is None:
-        _config_loader_instance = MCPConfigLoader(config_path, schema_path)
-    return _config_loader_instance
+    global _mcp_config_loader
+    if _mcp_config_loader is None:
+        _mcp_config_loader = MCPConfigLoader(config_path, schema_path)
+    return _mcp_config_loader
 
 
 def reset_mcp_config_loader() -> None:
-    """重置全局配置加载器实例（主要用于测试）"""
-    global _config_loader_instance
-    _config_loader_instance = None 
+    """重置MCP配置加载器实例（主要用于测试）"""
+    global _mcp_config_loader
+    _mcp_config_loader = None

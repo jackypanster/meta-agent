@@ -3,6 +3,7 @@
 提供简单的 .env 文件配置加载功能。
 """
 
-from .settings import get_config, ConfigError
+from .settings import get_config
+from src.exceptions import ConfigError
 
 __all__ = ['get_config', 'ConfigError']
