@@ -31,28 +31,27 @@
   },
   "categories": {
     "utility": {
-      "description": "实用工具类服务",
+      "description": "实用工具服务",
       "color": "blue"
     },
     "network": {
-      "description": "网络访问类服务", 
+      "description": "网络和数据获取服务",
       "color": "green"
     },
     "storage": {
-      "description": "数据存储类服务",
-      "color": "yellow"
+      "description": "数据存储和管理服务",
+      "color": "orange"
     }
   },
   "metadata": {
-    "created_at": "2025-06-15T15:00:00Z",
-    "last_modified": "2025-06-15T15:00:00Z",
+    "created_at": "2025-06-17T05:00:00Z",
+    "last_modified": "2025-06-17T05:00:00Z",
     "schema_version": "1.0",
     "author": "Qwen-Agent MVP",
     "notes": [
-      "此配置文件定义了所有可用的MCP服务器",
-      "可以通过设置enabled字段来启用/禁用特定服务器",
-      "支持热重载，修改配置文件后无需重启应用",
-      "遵循fail-fast原则：任何连接或配置问题都会立即失败"
+      "标准MCP服务器配置，遵循Qwen-Agent官方支持的命令行启动格式",
+      "当前只支持command+args方式启动的MCP服务器",
+      "SSE协议的MCP服务器需要框架级别的支持升级"
     ]
   }
 } 

@@ -20,45 +20,96 @@
       "patternProperties": {
         "^[a-zA-Z][a-zA-Z0-9_-]*$": {
           "type": "object",
-          "required": ["command", "args"],
-          "properties": {
-            "command": {
-              "type": "string",
-              "minLength": 1,
-              "description": "启动服务器的命令"
-            },
-            "args": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "命令参数列表"
-            },
-            "enabled": {
-              "type": "boolean",
-              "default": true,
-              "description": "是否启用此服务器"
-            },
-            "description": {
-              "type": "string",
-              "description": "服务器功能描述"
-            },
-            "category": {
-              "type": "string",
-              "description": "服务器分类"
-            },
-
-            "env": {
-              "type": "object",
-              "description": "环境变量设置",
-              "patternProperties": {
-                "^[A-Z_][A-Z0-9_]*$": {
-                  "type": "string"
+          "oneOf": [
+            {
+              "description": "命令行启动的MCP服务器",
+              "required": ["command", "args"],
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "启动服务器的命令"
+                },
+                "args": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "命令参数列表"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "是否启用此服务器"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "服务器功能描述"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "服务器分类"
+                },
+                "env": {
+                  "type": "object",
+                  "description": "环境变量设置",
+                  "patternProperties": {
+                    "^[A-Z_][A-Z0-9_]*$": {
+                      "type": "string"
+                    }
+                  }
                 }
-              }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "SSE协议的MCP服务器",
+              "required": ["type", "config"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["sse"],
+                  "description": "服务器协议类型"
+                },
+                "config": {
+                  "type": "object",
+                  "required": ["url"],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "SSE服务器URL地址"
+                    },
+                    "timeout": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "连接超时时间（秒）"
+                    },
+                    "reconnect": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "是否自动重连"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "是否启用此服务器"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "服务器功能描述"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "服务器分类"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ]
         }
       },
       "additionalProperties": false
